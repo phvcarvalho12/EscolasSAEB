@@ -34,7 +34,7 @@ interface Escola {
   cidade: string;
   tipo: 'Pública' | 'Privada';
   ideb: number; // Índice de Desenvolvimento da Educação Básica (0-10)
-  enade: number; // Conceito ENADE (1-5)
+  saeb: number; // Conceito SAEB (1-5)
   numeroAlunos: number;
   distanciaKm: number; // Distância simulada do usuário
   lat: number;
@@ -219,11 +219,11 @@ export default function App() {
     return 'text-red-500 bg-red-100';
   };
 
-  const getEnadeStars = (enade: number) => {
+  const getSaebStars = (SAEB: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-4 w-4 ${i < enade ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+        className={`h-4 w-4 ${i < SAEB ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
       />
     ));
   };
@@ -270,14 +270,14 @@ export default function App() {
             {/* ============================================ */}
             {/* 6. ADICIONAR NOVOS FILTROS NO JSX (API) */}
             {/* ============================================ */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-blue-50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-green-50 rounded-lg">
               <div className="space-y-2">
-                <Label className="text-blue-700">Estado (UF)</Label>
+                <Label className="text-green-700">Estado (UF)</Label>
                 <Select
                   value={filtrosAPI.UF}
                   onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, UF: value })}
                 >
-                  <SelectTrigger className="border-blue-200">
+                  <SelectTrigger className="border-green-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -291,22 +291,22 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-blue-700">Município</Label>
+                <Label className="text-green-700">Município</Label>
                 <Input
                   placeholder="Ex: São Paulo"
                   value={filtrosAPI.Municipio}
                   onChange={(e) => setFiltrosAPI({ ...filtrosAPI, Municipio: e.target.value })}
-                  className="border-blue-200"
+                  className="border-green-200"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-blue-700">Rede</Label>
+                <Label className="text-green-700">Rede</Label>
                 <Select
                   value={filtrosAPI.Rede}
                   onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, Rede: value })}
                 >
-                  <SelectTrigger className="border-blue-200">
+                  <SelectTrigger className="border-green-200">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -319,12 +319,12 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-blue-700">Tipo de Ensino</Label>
+                <Label className="text-green-700">Tipo de Ensino</Label>
                 <Select
                   value={filtrosAPI.TipoEnsino}
                   onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, TipoEnsino: value })}
                 >
-                  <SelectTrigger className="border-blue-200">
+                  <SelectTrigger className="border-green-200">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -340,7 +340,7 @@ export default function App() {
                 <Button
                   onClick={buscarEscolas}
                   disabled={loadingEscolas}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-green-600 hover:bg-green-700"
                 >
                   {loadingEscolas ? 'Buscando...' : 'Buscar Escolas'}
                 </Button>
@@ -494,11 +494,11 @@ export default function App() {
                     </Badge>
                   </div>
 
-                  {/* ENADE */}
+                  {/* SAEB */}
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Conceito ENADE:</span>
+                    <span className="text-sm font-medium">Conceito SAEB:</span>
                     <div className="flex gap-1">
-                      {getEnadeStars(escola.enade)}
+                      {getSaebStars(escola.saeb)}
                     </div>
                   </div>
 

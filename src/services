@@ -1,0 +1,242 @@
+// ============================================
+// src/services/api.ts
+// Serviço centralizado para todas as chamadas de API
+// ============================================
+
+const API_BASE_URL = 'https://localhost:44308/api';
+
+// ============================================
+// TIPOS
+// ============================================
+export interface LoginRequest {
+  email: string;
+  senha: string;
+}
+
+export interface CadastroRequest {
+  email: string;
+  senha: string;
+  nome: string;
+}
+
+export interface IdebQueryParams {
+  UF?: string;
+  Municipio?: string;
+  Rede?: string; // Municipal, Estadual, Privada
+  TipoEnsino?: string; // Anos Iniciais, Anos Finais, Ensino Médio
+}
+
+// ============================================
+// FUNÇÕES DE API
+// ============================================
+
+export const api = {
+  // ==========================================
+  // AUTH - AUTENTICAÇÃO
+  // ==========================================
+  
+  /**
+   * POST /api/Cadastro/PostLogin
+   * Faz login do usuário
+   */
+  login: async (dados: LoginRequest) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Cadastro/PostLogin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados)
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Email ou senha incorretos');
+        }
+        throw new Error('Erro ao fazer login');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erro no login:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * POST /api/Cadastro/PostCadastro
+   * Cadastra novo usuário
+   */
+  cadastrar: async (dados: CadastroRequest) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Cadastro/PostCadastro`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Erro ao realizar cadastro';
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.erro || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
+      throw error;
+    }
+  },
+
+  // ==========================================
+  // IDEB - DADOS DAS ESCOLAS
+  // ==========================================
+  
+  /**
+   * GET /api/Ideb
+   * Busca dados das escolas pelo IDEB
+   * 
+   * @param params - Parâmetros de filtro
+   * @returns Lista de escolas
+   */
+  buscarEscolas: async (params: IdebQueryParams = {}) => {
+    try {
+      // Construir query string
+      const queryParams = new URLSearchParams();
+      
+      if (params.UF) queryParams.append('UF', params.UF);
+      if (params.Municipio) queryParams.append('Municipio', params.Municipio);
+      if (params.Rede) queryParams.append('Rede', params.Rede);
+      if (params.TipoEnsino) queryParams.append('TipoEnsino', params.TipoEnsino);
+
+      const url = `${API_BASE_URL}/Ideb${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar escolas');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao buscar escolas:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * GET /api/Ideb (lista UFs)
+   * Busca lista de estados
+   */
+  buscarEstados: async () => {
+    try {
+      // Chamada sem parâmetros pode retornar lista de UFs
+      const response = await fetch(`${API_BASE_URL}/Ideb`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao buscar estados');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao buscar estados:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * GET /api/Ideb?UF=XX (lista municípios)
+   * Busca lista de municípios por UF
+   */
+  buscarMunicipios: async (uf: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Ideb?UF=${uf}`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao buscar municípios');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao buscar municípios:', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Mapeia o tipo de ensino da API para o formato do sistema
+ */
+export const mapearNivelEnsino = (tipoEnsino?: string): 'Fundamental I' | 'Fundamental II' | 'Médio' | 'Fundamental Completo' | 'Completo' => {
+  const tipo = tipoEnsino?.toLowerCase() || '';
+  
+  if (tipo.includes('iniciais')) return 'Fundamental I';
+  if (tipo.includes('finais')) return 'Fundamental II';
+  if (tipo.includes('médio') || tipo.includes('medio')) return 'Médio';
+  if (tipo.includes('completo')) return 'Completo';
+  
+  return 'Fundamental Completo';
+};
+
+/**
+ * Mapeia a rede da API para Pública ou Privada
+ */
+export const mapearTipoEscola = (rede?: string): 'Pública' | 'Privada' => {
+  return rede?.toLowerCase() === 'privada' ? 'Privada' : 'Pública';
+};
+
+// ============================================
+// EXEMPLO DE USO:
+// ============================================
+/*
+import { api } from './services/api';
+
+// Login
+try {
+  const usuario = await api.login({ email: 'teste@email.com', senha: '123456' });
+  console.log('Usuário logado:', usuario);
+} catch (erro) {
+  console.error('Erro:', erro.message);
+}
+
+// Cadastro
+try {
+  const novoUsuario = await api.cadastrar({
+    email: 'novo@email.com',
+    senha: '123456',
+    nome: 'João Silva'
+  });
+  console.log('Cadastrado:', novoUsuario);
+} catch (erro) {
+  console.error('Erro:', erro.message);
+}
+
+// Buscar escolas
+try {
+  const escolas = await api.buscarEscolas({
+    UF: 'SP',
+    Municipio: 'São Paulo',
+    Rede: 'Municipal',
+    TipoEnsino: 'Anos Iniciais'
+  });
+  console.log('Escolas encontradas:', escolas);
+} catch (erro) {
+  console.error('Erro:', erro.message);
+}
+*/
+
+export default api;

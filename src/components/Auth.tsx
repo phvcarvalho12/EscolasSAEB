@@ -54,7 +54,7 @@ export function Auth({ onLogin }: AuthProps) {
     const erros: string[] = [];
     
     if (senha.length < 6) {
-      erros.push('Mínimo 6 caracteres');
+      erros.push('Mínimo 8 caracteres');
     }
     if (!/[A-Z]/.test(senha)) {
       erros.push('Uma letra maiúscula');
@@ -143,11 +143,13 @@ export function Auth({ onLogin }: AuthProps) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email: dadosCadastro.email,
-        senha: dadosCadastro.senha,
-        nome: dadosCadastro.nome.trim()
+      body: JSON.stringify
+      ({
+        Email: dadosCadastro.email,
+        Senha: dadosCadastro.senha,
+        Nome: dadosCadastro.nome.trim()
       })
+
     });
 
     // Tratar erros
@@ -170,8 +172,14 @@ export function Auth({ onLogin }: AuthProps) {
       throw new Error('Erro ao realizar cadastro');
     }
 
-    const resultado = await response.json();
-    
+  let resultado = {};
+try {
+  resultado = await response.json();
+} catch {
+  console.warn("A resposta não era JSON ou estava vazia.");
+}
+
+
     // Criar objeto de usuário
     const novoUsuario: Usuario = {
       id: resultado.id || Date.now().toString(),
@@ -202,6 +210,17 @@ export function Auth({ onLogin }: AuthProps) {
   e.preventDefault();
   setLoading(true);
   setErro('');
+//tentativa de conexão com a api
+const response = await fetch(`${API_BASE_URL}/Cadastro/PostLogin`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    Email: dadosLogin.email,
+    Senha: dadosLogin.senha
+  })
+});
+
+console.log("Resposta da API:", response.status, response);
 
   if (!validarEmail(dadosLogin.email)) {
     setErro('Por favor, insira um email válido');
@@ -229,8 +248,14 @@ export function Auth({ onLogin }: AuthProps) {
       throw new Error('Erro ao fazer login. Tente novamente.');
     }
 
-    const resultado = await response.json();
-    
+    let resultado = {};
+try {
+  resultado = await response.json();
+} catch {
+  console.warn("A resposta não era JSON ou estava vazia.");
+}
+
+
     // Criar objeto de usuário
     const usuario: Usuario = {
       id: resultado.id || Date.now().toString(),
