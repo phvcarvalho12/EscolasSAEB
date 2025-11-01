@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from './components/ui/alert'; // Adicionado A
 // ============================================
 // 1. ADICIONE NO TOPO: API_BASE_URL
 // ============================================
-const API_BASE_URL = 'https://localhost:44308/api';
+const API_BASE_URL = 'https://prolific-delight-production-432f.up.railway.app';
 
 interface Usuario {
   id: string;
@@ -97,7 +97,7 @@ export default function App() {
       if (filtrosAPI.Rede) params.append('Rede', filtrosAPI.Rede);
       if (filtrosAPI.TipoEnsino) params.append('TipoEnsino', filtrosAPI.TipoEnsino);
 
-      // GET https://localhost:44308/api/Ideb
+      // GET 'https://prolific-delight-production-432f.up.railway.app';
       const response = await fetch(
         `${API_BASE_URL}/Ideb?${params.toString()}`
       );

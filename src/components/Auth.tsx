@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Eye, EyeOff, User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-const API_BASE_URL = 'https://localhost:44308/api';
+const API_BASE_URL = 'https://prolific-delight-production-432f.up.railway.app';
 
 interface Usuario {
   id: string;
@@ -229,7 +229,7 @@ console.log("Resposta da API:", response.status, response);
   }
 
   try {
-    // POST https://localhost:44308/api/Cadastro/PostLogin
+    // POST 'https://prolific-delight-production-432f.up.railway.app';
     const response = await fetch(`${API_BASE_URL}/Cadastro/PostLogin`, {
       method: 'POST',
       headers: {

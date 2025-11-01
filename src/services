@@ -3,7 +3,7 @@
 // Serviço centralizado para todas as chamadas de API
 // ============================================
 
-const API_BASE_URL = 'https://localhost:44308/api';
+const API_BASE_URL = 'https://prolific-delight-production-432f.up.railway.app';
 
 
 // ============================================
