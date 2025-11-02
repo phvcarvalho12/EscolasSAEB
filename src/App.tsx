@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
@@ -21,11 +22,13 @@ interface Usuario {
   dataCriacao: string;
 }
 
+// ATUALIZADO: Interface Escola agora corresponde exatamente a EscolaIdebResponse da sua API
 interface Escola {
-  SiglaUF: string;
-  NomeMunicipio: string;
-  NomeEscola: string;
-  Rede: 'Municipal' | 'Estadual' | 'Privada' | 'Não Informado'; // Adicionado 'Não Informado' para robustez
+  id: number; // Adicionado, tipo number conforme sua API
+  siglaUF: string; // Nome da propriedade corrigido (camelCase)
+  nomeMunicipio: string; // Nome da propriedade corrigido (camelCase)
+  nomeEscola: string; // Nome da propriedade corrigido (camelCase)
+  rede: 'Municipal' | 'Estadual' | 'Privada' | 'Não Informado'; // Nome da propriedade corrigido (camelCase)
   OfereceAnosIniciais: boolean;
   OfereceAnosFinais: boolean;
   OfereceEnsinoMedio: boolean;
@@ -44,9 +47,6 @@ const obterNiveisEnsino = (escola: Escola): string => {
   if (escola.OfereceEnsinoMedio) niveis.push('Médio');
   return niveis.length > 0 ? niveis.join(', ') : 'Não informado';
 };
-
-// Não é mais necessário obterIdebGeral para filtragem, pois a API fará isso.
-// Mantido para exibição de IDEB individual na Card da Escola.
 
 export default function App() {
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
@@ -93,15 +93,17 @@ export default function App() {
         throw new Error(errorData.message || 'Erro ao buscar dados das escolas');
       }
 
-      const dados = await response.json();
+      // ATUALIZADO: A API retorna EscolasResponse, que contém um array 'Escolas'
+      const responseData = await response.json();
+      const escolasRecebidas = Array.isArray(responseData.escolas) ? responseData.escolas : [];
       
-      const escolasRecebidas = Array.isArray(dados) ? dados : [];
-
       const escolasFormatadas: Escola[] = escolasRecebidas.map((item: any) => ({
-        SiglaUF: item.siglaUF || 'ND',
-        NomeMunicipio: item.nomeMunicipio || 'Não Informado',
-        NomeEscola: item.nomeEscola || 'Escola sem nome',
-        Rede: item.rede === 'Privada' ? 'Privada' : (item.rede === 'Estadual' ? 'Estadual' : (item.rede === 'Municipal' ? 'Municipal' : 'Não Informado')),
+        id: item.id, // Usando o ID da sua API
+        siglaUF: item.siglaUF || 'ND',
+        nomeMunicipio: item.nomeMunicipio || 'Não Informado',
+        nomeEscola: item.nomeEscola || 'Escola sem nome',
+        // Corrigido para 'rede' (camelCase) e ajustado o mapeamento da string
+        rede: item.rede === 'Privada' ? 'Privada' : (item.rede === 'Estadual' ? 'Estadual' : (item.rede === 'Municipal' ? 'Municipal' : 'Não Informado')),
         OfereceAnosIniciais: item.ofereceAnosIniciais || false,
         OfereceAnosFinais: item.ofereceAnosFinais || false,
         OfereceEnsinoMedio: item.ofereceEnsinoMedio || false,
@@ -138,8 +140,9 @@ export default function App() {
 
   const escolasFiltradas = useMemo(() => {
     return escolas.filter(escola => {
-      const matchBusca = escola.NomeEscola.toLowerCase().includes(buscaNomeMunicipio.toLowerCase()) ||
-                         escola.NomeMunicipio.toLowerCase().includes(buscaNomeMunicipio.toLowerCase());
+      // Corrigido para 'nomeEscola' e 'nomeMunicipio' (camelCase)
+      const matchBusca = escola.nomeEscola.toLowerCase().includes(buscaNomeMunicipio.toLowerCase()) ||
+                         escola.nomeMunicipio.toLowerCase().includes(buscaNomeMunicipio.toLowerCase());
       return matchBusca;
     });
   }, [buscaNomeMunicipio, escolas]);
@@ -192,7 +195,6 @@ export default function App() {
               <p className="text-gray-600">Encontre a escola ideal para seu filho baseado em dados oficiais</p>
             </div>
             <div className="flex items-center gap-4">
-              {/* Removido o botão "Sair" duplicado, pois o UserProfile já oferece essa funcionalidade. */}
               <UserProfile usuario={usuarioLogado} onLogout={handleLogout} />
             </div>
           </div>
@@ -359,21 +361,21 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {escolasFiltradas.map((escola, index) => (
-            <Card key={index} className="border-green-200 hover:shadow-lg transition-shadow">
+          {escolasFiltradas.map((escola) => ( // Removido 'index' e usando 'escola.id' como key
+            <Card key={escola.id} className="border-green-200 hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-2">
                   <CardTitle className="text-lg text-green-800 leading-tight">
-                    {escola.NomeEscola}
+                    {escola.nomeEscola} {/* Corrigido para nomeEscola */}
                   </CardTitle>
-                  <Badge variant={escola.Rede === 'Privada' ? 'default' : 'secondary'} className={escola.Rede === 'Privada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}>
-                    {escola.Rede}
+                  <Badge variant={escola.rede === 'Privada' ? 'default' : 'secondary'} className={escola.rede === 'Privada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}>
+                    {escola.rede} {/* Corrigido para rede */}
                   </Badge>
                 </div>
 
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <MapPin className="h-4 w-4" />
-                  <span>{escola.NomeMunicipio} - {escola.SiglaUF}</span>
+                  <span>{escola.nomeMunicipio} - {escola.siglaUF}</span> {/* Corrigido para nomeMunicipio e siglaUF */}
                 </div>
               </CardHeader>
 
