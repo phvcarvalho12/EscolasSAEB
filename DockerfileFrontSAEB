@@ -11,6 +11,10 @@ RUN npm install
 # Copiar o restante do código fonte
 COPY . .
 
+# Adicionar permissão de execução explicitamente para o Vite
+# Isso é crucial para evitar o erro "Permission denied"
+RUN chmod +x ./node_modules/.bin/vite
+
 # Executar o build do Vite
 # O output do build será na pasta 'build' conforme seu vite.config.mts.
 RUN npm run build
