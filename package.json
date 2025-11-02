@@ -54,8 +54,9 @@
             "@types/node": "18.19.0"
       },
       "scripts": {
-    "dev": "vite",
-    "build": "chmod +x ./node_modules/.bin/vite && vite build",
-    "start": "chmod +x ./node_modules/.bin/serve && serve -s build -l $PORT"
+      "dev": "vite",
+      "build": "vite build",
+      "preview": "vite preview",
+      "start": "vite preview --host 0.0.0.0 --port $PORT"
   }
 }
