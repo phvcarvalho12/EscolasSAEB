@@ -1,3 +1,4 @@
+// Auth.tsx
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -53,7 +54,8 @@ export function Auth({ onLogin }: AuthProps) {
   const validarSenha = (senha: string): { valida: boolean; erros: string[] } => {
     const erros: string[] = [];
     
-    if (senha.length < 6) {
+    // CORREÇÃO: Mudar de 6 para 8 para corresponder à mensagem
+    if (senha.length < 8) { 
       erros.push('Mínimo 8 caracteres');
     }
     if (!/[A-Z]/.test(senha)) {
@@ -104,15 +106,17 @@ export function Auth({ onLogin }: AuthProps) {
       return;
     }
 
-    if (emailExiste(dadosCadastro.email)) {
-      setErro('Este email já está cadastrado. Faça login.');
-      setLoading(false);
-      return;
-    }
+    // A validação de emailExistente deve ser feita pela API ao tentar cadastrar
+    // Este mock local pode ser removido ou adaptado se a API já faz isso
+    // if (emailExiste(dadosCadastro.email)) {
+    //   setErro('Este email já está cadastrado. Faça login.');
+    //   setLoading(false);
+    //   return;
+    // }
 
     try {
       // Simular delay de cadastro
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500)); // Reduzido o delay para agilizar
 
       setSucesso('Dados validados! Agora escolha seu nome de perfil.');
       setEtapaCadastro('perfil');
@@ -137,7 +141,6 @@ export function Auth({ onLogin }: AuthProps) {
     }
 
     try {
-      // POST /api/Cadastro/PostCadastro
       const response = await fetch(`${API_BASE_URL}/api/Cadastro/PostCadastro`, {
         method: 'POST',
         headers: {
@@ -149,18 +152,13 @@ export function Auth({ onLogin }: AuthProps) {
           Senha: dadosCadastro.senha,
           Nome: dadosCadastro.nome.trim()
         })
-
       });
 
-      // Tratar erros
       if (response.status === 400) {
         const errorData = await response.json().catch(() => ({}));
-        
-        // Se o email já existe, sua API provavelmente retorna um erro específico
         if (errorData.message?.includes('email') || errorData.message?.includes('Email')) {
           throw new Error('Este email já está cadastrado. Faça login.');
         }
-        
         throw new Error(errorData.message || 'Dados inválidos');
       }
 
@@ -173,28 +171,24 @@ export function Auth({ onLogin }: AuthProps) {
       }
 
     let resultado = {};
-  try {
-    resultado = await response.json();
-  } catch {
-    console.warn("A resposta não era JSON ou estava vazia.");
-  }
+    try {
+      resultado = await response.json();
+    } catch {
+      console.warn("A resposta não era JSON ou estava vazia.");
+    }
 
-
-      // Criar objeto de usuário
       const novoUsuario: Usuario = {
         id: resultado.id || Date.now().toString(),
         email: dadosCadastro.email,
-        senha: '', // NÃO armazenar senha
+        senha: '',
         nome: dadosCadastro.nome.trim(),
         dataCriacao: resultado.dataCriacao || new Date().toISOString()
       };
 
-      // Salvar no localStorage
       localStorage.setItem('escolafinder_usuario_logado', JSON.stringify(novoUsuario));
 
       setSucesso('Cadastro realizado com sucesso! Bem-vindo ao EscolaFinder!');
 
-      // Fazer login automático
       setTimeout(() => onLogin(novoUsuario), 1500);
 
     } catch (erro: any) {
@@ -218,7 +212,6 @@ export function Auth({ onLogin }: AuthProps) {
     }
 
     try {
-      // POST 'https://prolific-delight-production-432f.up.railway.app';
       const response = await fetch(`${API_BASE_URL}/api/Cadastro/PostLogin`, {
         method: 'POST',
         headers: {
@@ -244,12 +237,10 @@ export function Auth({ onLogin }: AuthProps) {
       console.warn("A resposta não era JSON ou estava vazia.");
     }
 
-
-      // Criar objeto de usuário
       const usuario: Usuario = {
         id: resultado.id || Date.now().toString(),
         email: resultado.email || dadosLogin.email,
-        senha: '', // Não armazenar senha
+        senha: '',
         nome: resultado.nome || 'Usuário',
         dataCriacao: resultado.dataCriacao || new Date().toISOString()
       };
@@ -379,8 +370,9 @@ export function Auth({ onLogin }: AuthProps) {
                         }
                       </button>
                     </div>
+                    {/* CORREÇÃO: Mudar de 6 para 8 para corresponder à validação */}
                     <p className="text-xs text-gray-500">
-                      Mínimo 6 caracteres, uma maiúscula e um número
+                      Mínimo 8 caracteres, uma maiúscula e um número
                     </p>
                   </div>
 
