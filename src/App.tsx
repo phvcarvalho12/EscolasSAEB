@@ -357,13 +357,13 @@ export default function App() {
             <p className="text-green-800 font-semibold">Carregando escolas...</p>
           ) : (
             <h2 className="text-green-800 font-semibold">
-              {escolasExibidas.length} escola(s) encontrada(s) {/* Alterado para escolasExibidas */}
+              {escolasExibidas.length} escola(s) encontrada(s) 
             </h2>
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {escolasExibidas.map((escola) => ( {/* Alterado para escolasExibidas */}
+          {escolasExibidas.map((escola) => ( 
             <Card key={escola.id} className="border-green-200 hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-2">
@@ -423,7 +423,7 @@ export default function App() {
           ))}
         </div>
 
-        {escolasExibidas.length === 0 && !loadingEscolas && ( {/* Alterado para escolasExibidas */}
+        {escolasExibidas.length === 0 && !loadingEscolas && ( 
           <Card className="border-green-200">
             <CardContent className="text-center py-12">
               <div className="text-gray-500 mb-4">
