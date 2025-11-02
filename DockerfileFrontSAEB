@@ -36,6 +36,5 @@ EXPOSE 3000
 # ou a porta que você espera, mas o $PORT do Railway irá sobrescrever
 
 # Comando para iniciar o servidor de arquivos estáticos
-# Usamos 'sh -c' para garantir que $PORT seja expandido corretamente no shell.
-# O 'serve' aponta para a pasta 'build'.
-CMD sh -c "serve -s build -l tcp://$PORT"
+# CRUCIAL: Usar '-l 0.0.0.0:$PORT' para ouvir em todas as interfaces
+CMD sh -c "serve -s build -l 0.0.0.0:$PORT"
