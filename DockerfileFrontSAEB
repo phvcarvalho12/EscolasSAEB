@@ -11,24 +11,18 @@ RUN npm install
 # Copiar o restante do código fonte
 COPY . .
 
-# Adicionar permissão de execução explicitamente para npx e então usar npx para executar o build do Vite
-# Nota: o npx pode estar em diferentes locais dependendo da instalação.
-# Geralmente, ele está acessível via PATH após 'npm install'.
-# Se 'sh: 1: npx: Permission denied' persistir, podemos tentar o caminho completo para npx.
-# Por enquanto, vamos tentar dar permissão ao binário vite e chamá-lo diretamente,
-# já que o npx em si está com problemas.
-
-# Tentar dar permissão ao executável vite E chamá-lo pelo caminho completo para evitar o npx problemático
+# Adicionar permissão de execução explicitamente para o Vite e então executar o build.
+# O output do build será na pasta 'build' conforme seu vite.config.mts.
 RUN chmod +x ./node_modules/.bin/vite && ./node_modules/.bin/vite build
-
 
 # Production stage
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copiar os arquivos buildados. O Vite usa 'dist' por padrão.
-COPY --from=build /app/dist ./dist
+# COPIAR DA PASTA 'build', NÃO 'dist'! <-- MUDANÇA AQUI
+COPY --from=build /app/build ./build 
+# Copia os arquivos buildados da pasta 'build'
 # Adicionado: Copiar package.json para o stage de produção
 COPY --from=build /app/package*.json ./
 
@@ -39,5 +33,5 @@ RUN npm install -g serve
 EXPOSE $PORT
 
 # Comando para iniciar o servidor de arquivos estáticos
-# O Railway passará $PORT para este comando
-CMD ["serve", "-s", "dist", "-p", "$PORT"]
+# Agora o 'serve' deve apontar para a pasta 'build'. <-- MUDANÇA AQUI
+CMD ["serve", "-s", "build", "-p", "$PORT"]
