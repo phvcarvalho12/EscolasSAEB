@@ -1,26 +1,37 @@
 # Build stage
-FROM node:18 AS build
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copiar e instalar
+# Copiar package files
 COPY package*.json ./
+
+# Instalar dependências
 RUN npm install
 
-# Copiar código e buildar
+# Copiar código fonte
 COPY . .
-RUN npm run build
+
+# Adicionar permissão de execução explicitamente para o Vite antes de construir
+# E então executar o build
+RUN chmod +x ./node_modules/.bin/vite && vite build
 
 # Production stage
-FROM node:18-slim
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copiar build
+# Copiar arquivos buildados
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/package*.json ./
 
-# Instalar serve
+# Instalar apenas serve
 RUN npm install -g serve
 
-# Rodar
-CMD serve -s dist -p ${PORT:-3000}
+# Adicionar permissão de execução explicitamente para o Vite antes de construir
+# E então executar o build
+RUN chmod +x ./node_modules/.bin/vite && vite build
+
+# Comando para iniciar o servidor de arquivos estáticos
+# O Railway passará $PORT para este comando
+CMD ["serve", "-s", "dist", "-p", "$PORT"]
