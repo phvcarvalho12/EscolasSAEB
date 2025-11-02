@@ -138,7 +138,7 @@ export function Auth({ onLogin }: AuthProps) {
 
     try {
       // POST /api/Cadastro/PostCadastro
-      const response = await fetch(`${API_BASE_URL}/Cadastro/PostCadastro`, {
+      const response = await fetch(`${API_BASE_URL}/api/Cadastro/PostCadastro`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -219,7 +219,7 @@ export function Auth({ onLogin }: AuthProps) {
 
     try {
       // POST 'https://prolific-delight-production-432f.up.railway.app';
-      const response = await fetch(`${API_BASE_URL}/Cadastro/PostLogin`, {
+      const response = await fetch(`${API_BASE_URL}/api/Cadastro/PostLogin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -11,7 +11,10 @@ import { Auth } from './components/Auth';
 import { UserProfile } from './components/UserProfile';
 import { Alert, AlertDescription } from './components/ui/alert';
 
-const API_BASE_URL = 'https://prolific-delight-production-432f.up.railway.app';
+// Define a URL base da API lendo-a das variáveis de ambiente.
+// Em desenvolvimento, será lido de .env.development
+// Em produção, será lido de .env.production (ou .env.staging, se configurado)
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 interface Usuario {
   id: string;
@@ -23,6 +26,7 @@ interface Usuario {
 
 // ============================================
 // MODIFICAÇÃO: Nova Definição da interface Escola
+// Esta interface representa a estrutura dos dados que a API retorna para cada escola.
 // ============================================
 interface Escola {
   SiglaUF: string;
@@ -59,33 +63,38 @@ const obterIdebGeral = (escola: Escola): number => {
 
 export default function App() {
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
-  // MODIFICAÇÃO: Removido escolaSelecionada
-  // const [escolaSelecionada, setEscolaSelecionada] = useState<Escola | null>(null);
   
   const [filtros, setFiltros] = useState({
     busca: '',
     tipo: 'Todas',
     nivelEnsino: 'Todos',
-    distanciaMax: [10],
-    idebMin: [5.0]
+    distanciaMax: [10], // Mantido, mas não usado nos filtros da API
+    idebMin: [5.0] // Mantido, mas aplicado após a busca da API
   });
 
   const [escolas, setEscolas] = useState<Escola[]>([]);
   const [loadingEscolas, setLoadingEscolas] = useState(false);
   const [erroEscolas, setErroEscolas] = useState('');
 
+  // Estados para os filtros que serão enviados na requisição GET para a API
   const [filtrosAPI, setFiltrosAPI] = useState({
     UF: 'SP',
     Municipio: 'São Paulo',
-    Rede: '',
-    TipoEnsino: ''
+    Rede: '', // 'Municipal', 'Estadual', 'Privada'
+    TipoEnsino: '' // 'Anos Iniciais', 'Anos Finais', 'Ensino Médio'
   });
 
+  /**
+   * Função assíncrona para buscar escolas da API.
+   * Ela constrói uma URL com parâmetros de querystring e faz uma requisição GET.
+   */
   const buscarEscolas = async () => {
     setLoadingEscolas(true);
     setErroEscolas('');
 
     try {
+      // 1. Constrói os parâmetros de querystring para a requisição GET
+      //    A API espera parâmetros como: ?UF=SP&Municipio=SaoPaulo&Rede=Municipal
       const params = new URLSearchParams();
 
       if (filtrosAPI.UF) params.append('UF', filtrosAPI.UF);
@@ -93,18 +102,34 @@ export default function App() {
       if (filtrosAPI.Rede) params.append('Rede', filtrosAPI.Rede);
       if (filtrosAPI.TipoEnsino) params.append('TipoEnsino', filtrosAPI.TipoEnsino);
 
-      const response = await fetch(
-        `${API_BASE_URL}/Ideb?${params.toString()}`
-      );
+      // 2. Monta a URL completa para a requisição GET
+      //    Exemplo: https://prolific-delight-production-432f.up.railway.app/Ideb?UF=SP&Municipio=São+Paulo
+      const url = `${API_BASE_URL}/api/Ideb?${params.toString()}`;
+      console.log('Realizando requisição GET para:', url); // Para depuração
 
+      // 3. Executa a requisição GET usando a API Fetch
+      const response = await fetch(url, {
+        method: 'GET', // Explicitamente definindo o método GET (padrão para fetch se não especificado)
+        headers: {
+          'Content-Type': 'application/json', // Informa ao servidor que esperamos JSON
+          // Adicione headers de autenticação aqui se necessário, ex:
+          // 'Authorization': `Bearer ${tokenDoUsuarioLogado}`
+        },
+      });
+
+      // 4. Verifica se a resposta da API foi bem-sucedida (status 2xx)
       if (!response.ok) {
-        throw new Error('Erro ao buscar dados das escolas');
+        // Se a resposta não for OK, lança um erro com a mensagem da API ou padrão
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+        throw new Error(errorData.message || 'Erro ao buscar dados das escolas');
       }
 
+      // 5. Converte a resposta para JSON
       const dados = await response.json();
 
       // ============================================
       // MODIFICAÇÃO: Mapeamento dos dados da API para a nova interface Escola
+      // Os dados recebidos da API são mapeados para o formato esperado pelo frontend.
       // ============================================
       const escolasFormatadas: Escola[] = dados.map((item: any) => ({
         SiglaUF: item.siglaUF || 'ND',
@@ -122,6 +147,7 @@ export default function App() {
         AnoReferenciaEnsinoMedio: item.anoReferenciaEnsinoMedio || null,
       }));
 
+      // 6. Atualiza o estado das escolas com os dados formatados
       setEscolas(escolasFormatadas);
 
     } catch (erro: any) {
@@ -132,13 +158,15 @@ export default function App() {
     }
   };
 
+  // Efeito que carrega o usuário logado do localStorage ao iniciar a aplicação
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem('escolafinder_usuario_logado');
     if (usuarioSalvo) {
       setUsuarioLogado(JSON.parse(usuarioSalvo));
     }
-  }, []);
+  }, []); // Executa apenas uma vez ao montar o componente
 
+  // Efeito que dispara a busca de escolas sempre que o usuário logado ou os filtros da API mudam
   useEffect(() => {
     if (usuarioLogado) {
       buscarEscolas();
@@ -147,27 +175,27 @@ export default function App() {
 
   // ============================================
   // MODIFICAÇÃO: Lógica de filtros ajustada para a nova interface Escola
+  // Este useMemo filtra os dados *já carregados* da API com base nos filtros internos do frontend.
   // ============================================
   const escolasFiltradas = useMemo(() => {
     return escolas.filter(escola => {
       const matchBusca = escola.NomeEscola.toLowerCase().includes(filtros.busca.toLowerCase()) ||
                          escola.NomeMunicipio.toLowerCase().includes(filtros.busca.toLowerCase());
 
-      const matchTipo = filtros.tipo === 'Todas' || escola.Rede.toLowerCase() === filtros.tipo.toLowerCase();
+      const matchTipo = filtros.tipo === 'Todas' || (escola.Rede.toLowerCase() === filtros.tipo.toLowerCase() || (filtros.tipo === 'Pública' && (escola.Rede === 'Municipal' || escola.Rede === 'Estadual')));
 
       const matchNivel = filtros.nivelEnsino === 'Todos' ||
                         (filtros.nivelEnsino === 'Fundamental I' && escola.OfereceAnosIniciais) ||
                         (filtros.nivelEnsino === 'Fundamental II' && escola.OfereceAnosFinais) ||
                         (filtros.nivelEnsino === 'Médio' && escola.OfereceEnsinoMedio) ||
                         (filtros.nivelEnsino === 'Fundamental' && (escola.OfereceAnosIniciais || escola.OfereceAnosFinais)) ||
-                        (filtros.nivelEnsino === 'Completo' && (escola.OfereceAnosIniciais || escola.OfereceAnosFinais || escola.OfereceEnsinoMedio));
+                        (filtros.nivelEnsino === 'Completo' && (escola.OfereceAnosIniciais && escola.OfereceAnosFinais && escola.OfereceEnsinoMedio));
       
       const idebGeral = obterIdebGeral(escola);
       const matchIdeb = idebGeral >= filtros.idebMin[0];
 
-      // REMOVIDO: matchDistancia (não há mais distanciaKm)
       return matchBusca && matchTipo && matchNivel && matchIdeb;
-    });// REMOVIDO: .sort((a, b) => a.distanciaKm - b.distanciaKm);
+    });
   }, [filtros, escolas]);
 
   const handleLogin = (usuario: Usuario) => {
@@ -177,26 +205,30 @@ export default function App() {
 
   const handleLogout = () => {
     setUsuarioLogado(null);
-    // MODIFICAÇÃO: Removido setEscolaSelecionada(null);
     setEscolas([]);
     localStorage.removeItem('escolafinder_usuario_logado');
   };
 
-  if (!usuarioLogado) {
-    return <Auth onLogin={handleLogin} />;
-  }
+  const [carregandoAuth, setCarregandoAuth] = useState(true);
 
-  // MODIFICAÇÃO: Removido o bloco if (escolaSelecionada)
-  // if (escolaSelecionada) {
-  //   return (
-  //     <EscolaDetalhes
-  //       escola={escolaSelecionada}
-  //       onVoltar={() => setEscolaSelecionada(null)}
-  //       onLogout={handleLogout}
-  //       usuarioLogado={{ nome: usuarioLogado.nome }}
-  //     />
-  //   );
-  // }
+useEffect(() => {
+  const usuarioSalvo = localStorage.getItem('escolafinder_usuario_logado');
+  if (usuarioSalvo) {
+    setUsuarioLogado(JSON.parse(usuarioSalvo));
+  }
+  setCarregandoAuth(false); // Marca como carregado
+}, []);
+
+// Mostra loading enquanto verifica autenticação
+if (carregandoAuth) {
+  return <div className="min-h-screen flex items-center justify-center">
+    <p>Carregando...</p>
+  </div>;
+}
+
+if (!usuarioLogado) {
+  return <Auth onLogin={handleLogin} />;
+}
 
   const getIdebColor = (ideb: number) => {
     if (ideb >= 8) return 'text-green-600 bg-green-100';
@@ -204,8 +236,6 @@ export default function App() {
     if (ideb >= 6) return 'text-yellow-600 bg-yellow-100';
     return 'text-red-500 bg-red-100';
   };
-
-  // REMOVIDO: getSaebStars (não há mais SAEB)
 
   return (
     <div className="min-h-screen bg-green-50">
@@ -473,13 +503,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* REMOVIDO: Infraestrutura e Botão "Ver Detalhes" */}
-                {/* <Button
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  onClick={() => setEscolaSelecionada(escola)}
-                >
-                  Ver Detalhes
-                </Button> */}
               </CardContent>
             </Card>
           ))}
