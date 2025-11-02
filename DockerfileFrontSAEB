@@ -11,27 +11,27 @@ RUN npm install
 # Copiar o restante do código fonte
 COPY . .
 
-# Adicionar permissão de execução explicitamente para o Vite e então executar o build.
+# Executar o build do Vite
 # O output do build será na pasta 'build' conforme seu vite.config.mts.
-RUN chmod +x ./node_modules/.bin/vite && ./node_modules/.bin/vite build
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine
 
 WORKDIR /app
 
-# COPIAR DA PASTA 'build', NÃO 'dist'! <-- MUDANÇA AQUI
+# Copia os arquivos buildados da pasta 'build' do estágio anterior
 COPY --from=build /app/build ./build 
-# Copia os arquivos buildados da pasta 'build'
-# Adicionado: Copiar package.json para o stage de produção
-COPY --from=build /app/package*.json ./
 
 # Instalar 'serve' globalmente para usá-lo como um servidor de arquivos estáticos
 RUN npm install -g serve
 
 # O Railway injetará a variável de ambiente $PORT em tempo de execução.
-EXPOSE $PORT
+# EXPOSE não é estritamente necessário para o Railway, mas é boa prática
+EXPOSE 3000 
+# ou a porta que você espera, mas o $PORT do Railway irá sobrescrever
 
 # Comando para iniciar o servidor de arquivos estáticos
-# Agora o 'serve' deve apontar para a pasta 'build'. <-- MUDANÇA AQUI
-CMD ["serve", "-s", "build", "-p", "$PORT"]
+# Usamos 'sh -c' para garantir que $PORT seja expandido corretamente no shell.
+# O 'serve' aponta para a pasta 'build'.
+CMD sh -c "serve -s build -l tcp://$PORT"
