@@ -25,7 +25,7 @@ interface Escola {
   SiglaUF: string;
   NomeMunicipio: string;
   NomeEscola: string;
-  Rede: 'Municipal' | 'Estadual' | 'Privada';
+  Rede: 'Municipal' | 'Estadual' | 'Privada' | 'Não Informado'; // Adicionado 'Não Informado' para robustez
   OfereceAnosIniciais: boolean;
   OfereceAnosFinais: boolean;
   OfereceEnsinoMedio: boolean;
@@ -45,31 +45,25 @@ const obterNiveisEnsino = (escola: Escola): string => {
   return niveis.length > 0 ? niveis.join(', ') : 'Não informado';
 };
 
-const obterIdebGeral = (escola: Escola): number => {
-  if (escola.IdebEnsinoMedio !== null) return escola.IdebEnsinoMedio;
-  if (escola.IdebAnosFinais !== null) return escola.IdebAnosFinais;
-  if (escola.IdebAnosIniciais !== null) return escola.IdebAnosIniciais;
-  return 0;
-};
+// Não é mais necessário obterIdebGeral para filtragem, pois a API fará isso.
+// Mantido para exibição de IDEB individual na Card da Escola.
 
 export default function App() {
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
   
-  const [filtrosFrontend, setFiltrosFrontend] = useState({ // Renomeado para maior clareza
-    busca: '',
-    idebMin: [5.0]
+  const [filtrosBusca, setFiltrosBusca] = useState({
+    UF: '', 
+    Municipio: '',
+    Rede: '',
+    TipoEnsino: '',
+    IdebMinimo: 0.0 
   });
+
+  const [buscaNomeMunicipio, setBuscaNomeMunicipio] = useState(''); 
 
   const [escolas, setEscolas] = useState<Escola[]>([]);
   const [loadingEscolas, setLoadingEscolas] = useState(false);
   const [erroEscolas, setErroEscolas] = useState('');
-
-  const [filtrosAPI, setFiltrosAPI] = useState({
-    UF: 'SP',
-    Municipio: 'São Paulo',
-    Rede: '',
-    TipoEnsino: ''
-  });
 
   const buscarEscolas = async () => {
     setLoadingEscolas(true);
@@ -78,10 +72,11 @@ export default function App() {
     try {
       const params = new URLSearchParams();
 
-      if (filtrosAPI.UF) params.append('UF', filtrosAPI.UF);
-      if (filtrosAPI.Municipio) params.append('Municipio', filtrosAPI.Municipio);
-      if (filtrosAPI.Rede) params.append('Rede', filtrosAPI.Rede);
-      if (filtrosAPI.TipoEnsino) params.append('TipoEnsino', filtrosAPI.TipoEnsino);
+      if (filtrosBusca.UF) params.append('UF', filtrosBusca.UF);
+      if (filtrosBusca.Municipio) params.append('Municipio', filtrosBusca.Municipio);
+      if (filtrosBusca.Rede) params.append('Rede', filtrosBusca.Rede);
+      if (filtrosBusca.TipoEnsino) params.append('TipoEnsino', filtrosBusca.TipoEnsino);
+      if (filtrosBusca.IdebMinimo > 0) params.append('IdebMinimo', filtrosBusca.IdebMinimo.toFixed(1));
 
       const url = `${API_BASE_URL}/api/Ideb?${params.toString()}`;
       console.log('Realizando requisição GET para:', url);
@@ -100,15 +95,13 @@ export default function App() {
 
       const dados = await response.json();
       
-      // SOLUÇÃO PARA O ERRO `dados.map is not a function`
-      // Verifica se dados é um array, se não, usa um array vazio
       const escolasRecebidas = Array.isArray(dados) ? dados : [];
 
       const escolasFormatadas: Escola[] = escolasRecebidas.map((item: any) => ({
         SiglaUF: item.siglaUF || 'ND',
         NomeMunicipio: item.nomeMunicipio || 'Não Informado',
         NomeEscola: item.nomeEscola || 'Escola sem nome',
-        Rede: item.rede === 'Privada' ? 'Privada' : (item.rede === 'Estadual' ? 'Estadual' : 'Municipal'),
+        Rede: item.rede === 'Privada' ? 'Privada' : (item.rede === 'Estadual' ? 'Estadual' : (item.rede === 'Municipal' ? 'Municipal' : 'Não Informado')),
         OfereceAnosIniciais: item.ofereceAnosIniciais || false,
         OfereceAnosFinais: item.ofereceAnosFinais || false,
         OfereceEnsinoMedio: item.ofereceEnsinoMedio || false,
@@ -141,23 +134,15 @@ export default function App() {
     if (usuarioLogado) {
       buscarEscolas();
     }
-  }, [usuarioLogado, filtrosAPI.UF, filtrosAPI.Municipio, filtrosAPI.Rede, filtrosAPI.TipoEnsino]);
+  }, [usuarioLogado, filtrosBusca.UF, filtrosBusca.Municipio, filtrosBusca.Rede, filtrosBusca.TipoEnsino, filtrosBusca.IdebMinimo]);
 
   const escolasFiltradas = useMemo(() => {
     return escolas.filter(escola => {
-      const matchBusca = escola.NomeEscola.toLowerCase().includes(filtrosFrontend.busca.toLowerCase()) ||
-                         escola.NomeMunicipio.toLowerCase().includes(filtrosFrontend.busca.toLowerCase());
-      
-      // Removidos filtros 'tipo' e 'nivelEnsino' do frontend, pois a API já deve lidar com eles
-      // Se você ainda quiser um filtro local de 'tipo' (Pública/Privada) ou 'nivelEnsino' (Fundamental I/II/Médio)
-      // você pode readicioná-los aqui, mas o ideal é que a API seja o mais eficiente possível.
-
-      const idebGeral = obterIdebGeral(escola);
-      const matchIdeb = idebGeral >= filtrosFrontend.idebMin[0];
-
-      return matchBusca && matchIdeb;
+      const matchBusca = escola.NomeEscola.toLowerCase().includes(buscaNomeMunicipio.toLowerCase()) ||
+                         escola.NomeMunicipio.toLowerCase().includes(buscaNomeMunicipio.toLowerCase());
+      return matchBusca;
     });
-  }, [filtrosFrontend, escolas]);
+  }, [buscaNomeMunicipio, escolas]);
 
   const handleLogin = (usuario: Usuario) => {
     setUsuarioLogado(usuario);
@@ -207,18 +192,7 @@ export default function App() {
               <p className="text-gray-600">Encontre a escola ideal para seu filho baseado em dados oficiais</p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="text-right hidden md:block">
-                <p className="text-sm text-gray-600">Bem-vindo,</p>
-                <p className="text-green-700 font-medium">{usuarioLogado.nome}</p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </Button>
+              {/* Removido o botão "Sair" duplicado, pois o UserProfile já oferece essa funcionalidade. */}
               <UserProfile usuario={usuarioLogado} onLogout={handleLogout} />
             </div>
           </div>
@@ -238,14 +212,14 @@ export default function App() {
               <div className="space-y-2">
                 <Label className="text-green-700">Estado (UF)</Label>
                 <Select
-                  value={filtrosAPI.UF}
-                  onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, UF: value })}
+                  value={filtrosBusca.UF}
+                  onValueChange={(value) => setFiltrosBusca({ ...filtrosBusca, UF: value })}
                 >
                   <SelectTrigger className="border-green-200">
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione o Estado" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* SOLUÇÃO PARA MAIS ESTADOS */}
+                    <SelectItem value="">Todos os Estados</SelectItem>
                     <SelectItem value="AC">Acre</SelectItem>
                     <SelectItem value="AL">Alagoas</SelectItem>
                     <SelectItem value="AP">Amapá</SelectItem>
@@ -281,20 +255,20 @@ export default function App() {
                 <Label className="text-green-700">Município</Label>
                 <Input
                   placeholder="Ex: São Paulo"
-                  value={filtrosAPI.Municipio}
-                  onChange={(e) => setFiltrosAPI({ ...filtrosAPI, Municipio: e.target.value })}
+                  value={filtrosBusca.Municipio}
+                  onChange={(e) => setFiltrosBusca({ ...filtrosBusca, Municipio: e.target.value })}
                   className="border-green-200"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-green-700">Rede de Ensino</Label> {/* Label mais descritivo */}
+                <Label className="text-green-700">Rede de Ensino</Label>
                 <Select
-                  value={filtrosAPI.Rede}
-                  onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, Rede: value })}
+                  value={filtrosBusca.Rede}
+                  onValueChange={(value) => setFiltrosBusca({ ...filtrosBusca, Rede: value })}
                 >
                   <SelectTrigger className="border-green-200">
-                    <SelectValue placeholder="Todas" />
+                    <SelectValue placeholder="Todas as Redes" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Todas</SelectItem>
@@ -306,13 +280,13 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-green-700">Tipo de Ensino Oferecido</Label> {/* Label mais descritivo */}
+                <Label className="text-green-700">Tipo de Ensino Oferecido</Label>
                 <Select
-                  value={filtrosAPI.TipoEnsino}
-                  onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, TipoEnsino: value })}
+                  value={filtrosBusca.TipoEnsino}
+                  onValueChange={(value) => setFiltrosBusca({ ...filtrosBusca, TipoEnsino: value })}
                 >
                   <SelectTrigger className="border-green-200">
-                    <SelectValue placeholder="Todos" />
+                    <SelectValue placeholder="Todos os Tipos" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Todos</SelectItem>
@@ -323,13 +297,27 @@ export default function App() {
                 </Select>
               </div>
 
+              <div className="space-y-3 md:col-span-2">
+                <Label className="text-green-700">
+                  IDEB mínimo: {filtrosBusca.IdebMinimo.toFixed(1)}
+                </Label>
+                <Slider
+                  value={[filtrosBusca.IdebMinimo]}
+                  onValueChange={(value) => setFiltrosBusca({ ...filtrosBusca, IdebMinimo: value[0] })}
+                  max={10}
+                  min={0}
+                  step={0.1}
+                  className="w-full"
+                />
+              </div>
+
               <div className="md:col-span-4">
                 <Button
                   onClick={buscarEscolas}
                   disabled={loadingEscolas}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >
-                  {loadingEscolas ? 'Buscando...' : 'Buscar Escolas'}
+                  {loadingEscolas ? 'Buscando...' : 'Aplicar Filtros e Buscar Escolas'}
                 </Button>
               </div>
             </div>
@@ -343,40 +331,23 @@ export default function App() {
               </Alert>
             )}
 
-            {/* CONSOLIDADO: Filtros de busca e IDEB agora no mesmo bloco de controle, removendo duplicidade */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"> 
-              <div className="space-y-2">
-                <Label className="text-green-700">Buscar por nome ou município:</Label>
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-green-700">Buscar por nome ou município (no resultado atual):</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Digite o nome da escola ou município"
-                    value={filtrosFrontend.busca}
-                    onChange={(e) => setFiltrosFrontend({ ...filtrosFrontend, busca: e.target.value })}
+                    value={buscaNomeMunicipio}
+                    onChange={(e) => setBuscaNomeMunicipio(e.target.value)}
                     className="pl-10 border-green-200 focus:border-green-500"
                   />
                 </div>
-              </div>
-
-              {/* IDEB Mínimo */}
-              <div className="space-y-3">
-                <Label className="text-green-700">
-                  IDEB mínimo: {filtrosFrontend.idebMin[0].toFixed(1)}
-                </Label>
-                <Slider
-                  value={filtrosFrontend.idebMin}
-                  onValueChange={(value) => setFiltrosFrontend({ ...filtrosFrontend, idebMin: value })}
-                  max={10}
-                  min={0}
-                  step={0.1}
-                  className="w-full"
-                />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Resultados */}
         <div className="mb-4">
           {loadingEscolas ? (
             <p className="text-green-800 font-semibold">Carregando escolas...</p>
@@ -395,7 +366,7 @@ export default function App() {
                   <CardTitle className="text-lg text-green-800 leading-tight">
                     {escola.NomeEscola}
                   </CardTitle>
-                  <Badge variant={escola.Rede === 'Pública' ? 'secondary' : 'default'}>
+                  <Badge variant={escola.Rede === 'Privada' ? 'default' : 'secondary'} className={escola.Rede === 'Privada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}>
                     {escola.Rede}
                   </Badge>
                 </div>

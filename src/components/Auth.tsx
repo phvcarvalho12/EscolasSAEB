@@ -1,4 +1,3 @@
-// Auth.tsx
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -68,17 +67,6 @@ export function Auth({ onLogin }: AuthProps) {
     return { valida: erros.length === 0, erros };
   };
 
-  // Função para obter usuários (mock - em produção viria da API)
-  const obterUsuarios = (): Usuario[] => {
-    return []; // Retorna array vazio por enquanto
-  };
-
-  // Função para verificar se email já existe
-  const emailExiste = (email: string): boolean => {
-    const usuarios = obterUsuarios();
-    return usuarios.some(usuario => usuario.email.toLowerCase() === email.toLowerCase());
-  };
-
   // Função para lidar com cadastro
   const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,14 +93,6 @@ export function Auth({ onLogin }: AuthProps) {
       setLoading(false);
       return;
     }
-
-    // A validação de emailExistente deve ser feita pela API ao tentar cadastrar
-    // Este mock local pode ser removido ou adaptado se a API já faz isso
-    // if (emailExiste(dadosCadastro.email)) {
-    //   setErro('Este email já está cadastrado. Faça login.');
-    //   setLoading(false);
-    //   return;
-    // }
 
     try {
       // Simular delay de cadastro
