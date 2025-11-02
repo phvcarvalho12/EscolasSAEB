@@ -11,9 +11,6 @@ import { Auth } from './components/Auth';
 import { UserProfile } from './components/UserProfile';
 import { Alert, AlertDescription } from './components/ui/alert';
 
-// Define a URL base da API lendo-a das variáveis de ambiente.
-// Em desenvolvimento, será lido de .env.development
-// Em produção, será lido de .env.production (ou .env.staging, se configurado)
 const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_BASE_URL;
 
 interface Usuario {
@@ -24,10 +21,6 @@ interface Usuario {
   dataCriacao: string;
 }
 
-// ============================================
-// MODIFICAÇÃO: Nova Definição da interface Escola
-// Esta interface representa a estrutura dos dados que a API retorna para cada escola.
-// ============================================
 interface Escola {
   SiglaUF: string;
   NomeMunicipio: string;
@@ -44,7 +37,6 @@ interface Escola {
   AnoReferenciaEnsinoMedio: number | null;
 }
 
-// Função auxiliar para mapear tipo de ensino (ajustada para os novos booleanos)
 const obterNiveisEnsino = (escola: Escola): string => {
   const niveis: string[] = [];
   if (escola.OfereceAnosIniciais) niveis.push('Fundamental I');
@@ -53,48 +45,37 @@ const obterNiveisEnsino = (escola: Escola): string => {
   return niveis.length > 0 ? niveis.join(', ') : 'Não informado';
 };
 
-// Função para obter o IDEB geral ou o mais relevante
 const obterIdebGeral = (escola: Escola): number => {
   if (escola.IdebEnsinoMedio !== null) return escola.IdebEnsinoMedio;
   if (escola.IdebAnosFinais !== null) return escola.IdebAnosFinais;
   if (escola.IdebAnosIniciais !== null) return escola.IdebAnosIniciais;
-  return 0; // Ou outro valor padrão
+  return 0;
 };
 
 export default function App() {
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
   
-  const [filtros, setFiltros] = useState({
+  const [filtrosFrontend, setFiltrosFrontend] = useState({ // Renomeado para maior clareza
     busca: '',
-    tipo: 'Todas',
-    nivelEnsino: 'Todos',
-    distanciaMax: [10], // Mantido, mas não usado nos filtros da API
-    idebMin: [5.0] // Mantido, mas aplicado após a busca da API
+    idebMin: [5.0]
   });
 
   const [escolas, setEscolas] = useState<Escola[]>([]);
   const [loadingEscolas, setLoadingEscolas] = useState(false);
   const [erroEscolas, setErroEscolas] = useState('');
 
-  // Estados para os filtros que serão enviados na requisição GET para a API
   const [filtrosAPI, setFiltrosAPI] = useState({
     UF: 'SP',
     Municipio: 'São Paulo',
-    Rede: '', // 'Municipal', 'Estadual', 'Privada'
-    TipoEnsino: '' // 'Anos Iniciais', 'Anos Finais', 'Ensino Médio'
+    Rede: '',
+    TipoEnsino: ''
   });
 
-  /**
-   * Função assíncrona para buscar escolas da API.
-   * Ela constrói uma URL com parâmetros de querystring e faz uma requisição GET.
-   */
   const buscarEscolas = async () => {
     setLoadingEscolas(true);
     setErroEscolas('');
 
     try {
-      // 1. Constrói os parâmetros de querystring para a requisição GET
-      //    A API espera parâmetros como: ?UF=SP&Municipio=SaoPaulo&Rede=Municipal
       const params = new URLSearchParams();
 
       if (filtrosAPI.UF) params.append('UF', filtrosAPI.UF);
@@ -102,36 +83,28 @@ export default function App() {
       if (filtrosAPI.Rede) params.append('Rede', filtrosAPI.Rede);
       if (filtrosAPI.TipoEnsino) params.append('TipoEnsino', filtrosAPI.TipoEnsino);
 
-      // 2. Monta a URL completa para a requisição GET
-      //    Exemplo: https://prolific-delight-production-432f.up.railway.app/Ideb?UF=SP&Municipio=São+Paulo
       const url = `${API_BASE_URL}/api/Ideb?${params.toString()}`;
-      console.log('Realizando requisição GET para:', url); // Para depuração
+      console.log('Realizando requisição GET para:', url);
 
-      // 3. Executa a requisição GET usando a API Fetch
       const response = await fetch(url, {
-        method: 'GET', // Explicitamente definindo o método GET (padrão para fetch se não especificado)
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json', // Informa ao servidor que esperamos JSON
-          // Adicione headers de autenticação aqui se necessário, ex:
-          // 'Authorization': `Bearer ${tokenDoUsuarioLogado}`
+          'Content-Type': 'application/json',
         },
       });
 
-      // 4. Verifica se a resposta da API foi bem-sucedida (status 2xx)
       if (!response.ok) {
-        // Se a resposta não for OK, lança um erro com a mensagem da API ou padrão
         const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
         throw new Error(errorData.message || 'Erro ao buscar dados das escolas');
       }
 
-      // 5. Converte a resposta para JSON
       const dados = await response.json();
+      
+      // SOLUÇÃO PARA O ERRO `dados.map is not a function`
+      // Verifica se dados é um array, se não, usa um array vazio
+      const escolasRecebidas = Array.isArray(dados) ? dados : [];
 
-      // ============================================
-      // MODIFICAÇÃO: Mapeamento dos dados da API para a nova interface Escola
-      // Os dados recebidos da API são mapeados para o formato esperado pelo frontend.
-      // ============================================
-      const escolasFormatadas: Escola[] = dados.map((item: any) => ({
+      const escolasFormatadas: Escola[] = escolasRecebidas.map((item: any) => ({
         SiglaUF: item.siglaUF || 'ND',
         NomeMunicipio: item.nomeMunicipio || 'Não Informado',
         NomeEscola: item.nomeEscola || 'Escola sem nome',
@@ -147,7 +120,6 @@ export default function App() {
         AnoReferenciaEnsinoMedio: item.anoReferenciaEnsinoMedio || null,
       }));
 
-      // 6. Atualiza o estado das escolas com os dados formatados
       setEscolas(escolasFormatadas);
 
     } catch (erro: any) {
@@ -158,45 +130,34 @@ export default function App() {
     }
   };
 
-  // Efeito que carrega o usuário logado do localStorage ao iniciar a aplicação
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem('escolafinder_usuario_logado');
     if (usuarioSalvo) {
       setUsuarioLogado(JSON.parse(usuarioSalvo));
     }
-  }, []); // Executa apenas uma vez ao montar o componente
+  }, []);
 
-  // Efeito que dispara a busca de escolas sempre que o usuário logado ou os filtros da API mudam
   useEffect(() => {
     if (usuarioLogado) {
       buscarEscolas();
     }
   }, [usuarioLogado, filtrosAPI.UF, filtrosAPI.Municipio, filtrosAPI.Rede, filtrosAPI.TipoEnsino]);
 
-  // ============================================
-  // MODIFICAÇÃO: Lógica de filtros ajustada para a nova interface Escola
-  // Este useMemo filtra os dados *já carregados* da API com base nos filtros internos do frontend.
-  // ============================================
   const escolasFiltradas = useMemo(() => {
     return escolas.filter(escola => {
-      const matchBusca = escola.NomeEscola.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-                         escola.NomeMunicipio.toLowerCase().includes(filtros.busca.toLowerCase());
-
-      const matchTipo = filtros.tipo === 'Todas' || (escola.Rede.toLowerCase() === filtros.tipo.toLowerCase() || (filtros.tipo === 'Pública' && (escola.Rede === 'Municipal' || escola.Rede === 'Estadual')));
-
-      const matchNivel = filtros.nivelEnsino === 'Todos' ||
-                        (filtros.nivelEnsino === 'Fundamental I' && escola.OfereceAnosIniciais) ||
-                        (filtros.nivelEnsino === 'Fundamental II' && escola.OfereceAnosFinais) ||
-                        (filtros.nivelEnsino === 'Médio' && escola.OfereceEnsinoMedio) ||
-                        (filtros.nivelEnsino === 'Fundamental' && (escola.OfereceAnosIniciais || escola.OfereceAnosFinais)) ||
-                        (filtros.nivelEnsino === 'Completo' && (escola.OfereceAnosIniciais && escola.OfereceAnosFinais && escola.OfereceEnsinoMedio));
+      const matchBusca = escola.NomeEscola.toLowerCase().includes(filtrosFrontend.busca.toLowerCase()) ||
+                         escola.NomeMunicipio.toLowerCase().includes(filtrosFrontend.busca.toLowerCase());
       
-      const idebGeral = obterIdebGeral(escola);
-      const matchIdeb = idebGeral >= filtros.idebMin[0];
+      // Removidos filtros 'tipo' e 'nivelEnsino' do frontend, pois a API já deve lidar com eles
+      // Se você ainda quiser um filtro local de 'tipo' (Pública/Privada) ou 'nivelEnsino' (Fundamental I/II/Médio)
+      // você pode readicioná-los aqui, mas o ideal é que a API seja o mais eficiente possível.
 
-      return matchBusca && matchTipo && matchNivel && matchIdeb;
+      const idebGeral = obterIdebGeral(escola);
+      const matchIdeb = idebGeral >= filtrosFrontend.idebMin[0];
+
+      return matchBusca && matchIdeb;
     });
-  }, [filtros, escolas]);
+  }, [filtrosFrontend, escolas]);
 
   const handleLogin = (usuario: Usuario) => {
     setUsuarioLogado(usuario);
@@ -211,24 +172,23 @@ export default function App() {
 
   const [carregandoAuth, setCarregandoAuth] = useState(true);
 
-useEffect(() => {
-  const usuarioSalvo = localStorage.getItem('escolafinder_usuario_logado');
-  if (usuarioSalvo) {
-    setUsuarioLogado(JSON.parse(usuarioSalvo));
+  useEffect(() => {
+    const usuarioSalvo = localStorage.getItem('escolafinder_usuario_logado');
+    if (usuarioSalvo) {
+      setUsuarioLogado(JSON.parse(usuarioSalvo));
+    }
+    setCarregandoAuth(false);
+  }, []);
+
+  if (carregandoAuth) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <p>Carregando...</p>
+    </div>;
   }
-  setCarregandoAuth(false); // Marca como carregado
-}, []);
 
-// Mostra loading enquanto verifica autenticação
-if (carregandoAuth) {
-  return <div className="min-h-screen flex items-center justify-center">
-    <p>Carregando...</p>
-  </div>;
-}
-
-if (!usuarioLogado) {
-  return <Auth onLogin={handleLogin} />;
-}
+  if (!usuarioLogado) {
+    return <Auth onLogin={handleLogin} />;
+  }
 
   const getIdebColor = (ideb: number) => {
     if (ideb >= 8) return 'text-green-600 bg-green-100';
@@ -239,7 +199,6 @@ if (!usuarioLogado) {
 
   return (
     <div className="min-h-screen bg-green-50">
-      {/* Header */}
       <div className="bg-white shadow-sm border-b border-green-200">
         <div className="container mx-auto px-4 py-6">
           <div className="flex justify-between items-center">
@@ -267,7 +226,6 @@ if (!usuarioLogado) {
       </div>
 
       <div className="container mx-auto p-4 max-w-7xl">
-        {/* Filtros */}
         <Card className="mb-6 border-green-200">
           <CardHeader className="bg-green-50">
             <CardTitle className="flex items-center gap-2 text-green-800">
@@ -287,10 +245,34 @@ if (!usuarioLogado) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SP">São Paulo</SelectItem>
-                    <SelectItem value="RJ">Rio de Janeiro</SelectItem>
+                    {/* SOLUÇÃO PARA MAIS ESTADOS */}
+                    <SelectItem value="AC">Acre</SelectItem>
+                    <SelectItem value="AL">Alagoas</SelectItem>
+                    <SelectItem value="AP">Amapá</SelectItem>
+                    <SelectItem value="AM">Amazonas</SelectItem>
+                    <SelectItem value="BA">Bahia</SelectItem>
+                    <SelectItem value="CE">Ceará</SelectItem>
+                    <SelectItem value="DF">Distrito Federal</SelectItem>
+                    <SelectItem value="ES">Espírito Santo</SelectItem>
+                    <SelectItem value="GO">Goiás</SelectItem>
+                    <SelectItem value="MA">Maranhão</SelectItem>
+                    <SelectItem value="MT">Mato Grosso</SelectItem>
+                    <SelectItem value="MS">Mato Grosso do Sul</SelectItem>
                     <SelectItem value="MG">Minas Gerais</SelectItem>
+                    <SelectItem value="PA">Pará</SelectItem>
+                    <SelectItem value="PB">Paraíba</SelectItem>
+                    <SelectItem value="PR">Paraná</SelectItem>
+                    <SelectItem value="PE">Pernambuco</SelectItem>
+                    <SelectItem value="PI">Piauí</SelectItem>
+                    <SelectItem value="RJ">Rio de Janeiro</SelectItem>
+                    <SelectItem value="RN">Rio Grande do Norte</SelectItem>
                     <SelectItem value="RS">Rio Grande do Sul</SelectItem>
+                    <SelectItem value="RO">Rondônia</SelectItem>
+                    <SelectItem value="RR">Roraima</SelectItem>
+                    <SelectItem value="SC">Santa Catarina</SelectItem>
+                    <SelectItem value="SP">São Paulo</SelectItem>
+                    <SelectItem value="SE">Sergipe</SelectItem>
+                    <SelectItem value="TO">Tocantins</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -306,7 +288,7 @@ if (!usuarioLogado) {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-green-700">Rede</Label>
+                <Label className="text-green-700">Rede de Ensino</Label> {/* Label mais descritivo */}
                 <Select
                   value={filtrosAPI.Rede}
                   onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, Rede: value })}
@@ -324,7 +306,7 @@ if (!usuarioLogado) {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-green-700">Tipo de Ensino</Label>
+                <Label className="text-green-700">Tipo de Ensino Oferecido</Label> {/* Label mais descritivo */}
                 <Select
                   value={filtrosAPI.TipoEnsino}
                   onValueChange={(value) => setFiltrosAPI({ ...filtrosAPI, TipoEnsino: value })}
@@ -361,68 +343,29 @@ if (!usuarioLogado) {
               </Alert>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {/* CONSOLIDADO: Filtros de busca e IDEB agora no mesmo bloco de controle, removendo duplicidade */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"> 
               <div className="space-y-2">
                 <Label className="text-green-700">Buscar por nome ou município:</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     placeholder="Digite o nome da escola ou município"
-                    value={filtros.busca}
-                    onChange={(e) => setFiltros({ ...filtros, busca: e.target.value })}
+                    value={filtrosFrontend.busca}
+                    onChange={(e) => setFiltrosFrontend({ ...filtrosFrontend, busca: e.target.value })}
                     className="pl-10 border-green-200 focus:border-green-500"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-green-700">Tipo de escola:</Label>
-                <Select
-                  value={filtros.tipo}
-                  onValueChange={(value) => setFiltros({ ...filtros, tipo: value })}
-                >
-                  <SelectTrigger className="border-green-200 focus:border-green-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Todas">Todas</SelectItem>
-                    <SelectItem value="Pública">Pública</SelectItem>
-                    <SelectItem value="Privada">Privada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-green-700">Nível de ensino:</Label>
-                <Select
-                  value={filtros.nivelEnsino}
-                  onValueChange={(value) => setFiltros({ ...filtros, nivelEnsino: value })}
-                >
-                  <SelectTrigger className="border-green-200 focus:border-green-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Todos">Todos</SelectItem>
-                    <SelectItem value="Fundamental I">Fundamental I (1º-5º ano)</SelectItem>
-                    <SelectItem value="Fundamental II">Fundamental II (6º-9º ano)</SelectItem>
-                    <SelectItem value="Fundamental">Fundamental Completo</SelectItem>
-                    <SelectItem value="Médio">Ensino Médio</SelectItem>
-                    <SelectItem value="Completo">Educação Completa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Sliders (Distância removido, IDEB mantido) */}
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
               {/* IDEB Mínimo */}
               <div className="space-y-3">
                 <Label className="text-green-700">
-                  IDEB mínimo: {filtros.idebMin[0].toFixed(1)}
+                  IDEB mínimo: {filtrosFrontend.idebMin[0].toFixed(1)}
                 </Label>
                 <Slider
-                  value={filtros.idebMin}
-                  onValueChange={(value) => setFiltros({ ...filtros, idebMin: value })}
+                  value={filtrosFrontend.idebMin}
+                  onValueChange={(value) => setFiltrosFrontend({ ...filtrosFrontend, idebMin: value })}
                   max={10}
                   min={0}
                   step={0.1}
@@ -444,7 +387,6 @@ if (!usuarioLogado) {
           )}
         </div>
 
-        {/* Lista de Escolas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {escolasFiltradas.map((escola, index) => (
             <Card key={index} className="border-green-200 hover:shadow-lg transition-shadow">
@@ -465,7 +407,6 @@ if (!usuarioLogado) {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Métricas */}
                 <div className="space-y-3">
                   {escola.IdebAnosIniciais !== null && (
                     <div className="flex justify-between items-center">
@@ -494,7 +435,6 @@ if (!usuarioLogado) {
                     </div>
                   )}
 
-                  {/* Níveis de Ensino Oferecidos */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Ensino:</span>
                     <Badge variant="outline" className="text-xs">
