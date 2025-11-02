@@ -1,36 +1,44 @@
-# Build stage
+# Estágio de build
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copiar package files
+# Copiar package files e instalar dependências
+# Isso aproveita o cache do Docker para dependências
 COPY package*.json ./
-
-# Instalar dependências
 RUN npm install
 
-# Copiar código fonte
+# Copiar o restante do código fonte
 COPY . .
 
-# Adicionar permissão de execução explicitamente para o Vite antes de construir
-# E então executar o build
-RUN chmod +x ./node_modules/.bin/vite && vite build
+# Usar npx para executar o build do Vite
+# npx é a maneira mais robusta de executar executáveis de pacotes locais
+# Ele geralmente lida com permissões e PATH automaticamente
+# Se "Permission denied" voltar, podemos adicionar o chmod antes do npx.
+RUN npx vite build
 
 # Production stage
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copiar arquivos buildados
+# Copiar os arquivos buildados. O Vite usa 'dist' por padrão.
 COPY --from=build /app/dist ./dist
+# Adicionado: Copiar package.json para o stage de produção
+# Isso é útil se o seu CMD (como 'serve') precisar de algo do package.json,
+# ou se você quiser rodar 'npm install --only=production' para 'serve'.
+# No seu caso, você está instalando 'serve' globalmente, então o package.json não é estritamente necessário aqui,
+# mas é uma boa prática para projetos JS/TS.
 COPY --from=build /app/package*.json ./
 
-# Instalar apenas serve
+# Instalar 'serve' globalmente para usá-lo como um servidor de arquivos estáticos
 RUN npm install -g serve
 
-# Adicionar permissão de execução explicitamente para o Vite antes de construir
-# E então executar o build
-RUN chmod +x ./node_modules/.bin/vite && vite build
+# O Railway injetará a variável de ambiente $PORT em tempo de execução.
+# Não defina ENV PORT aqui, se o Railway for gerenciar isso.
+# EXPOSE $PORT é uma boa prática para documentar a porta esperada.
+EXPOSE $PORT 
+# O Railway substituirá $PORT pela porta real
 
 # Comando para iniciar o servidor de arquivos estáticos
 # O Railway passará $PORT para este comando
