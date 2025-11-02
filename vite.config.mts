@@ -28,7 +28,7 @@
     server: {
   // Remova 'port' aqui ou defina para uma porta de desenvolvimento como 3000/5173
   // O Railway usará $PORT do package.json para o ambiente de produção
-  port: 3000, // ou 5173 para desenvolvimento local
+  //port: 3000, // ou 5173 para desenvolvimento local
   open: true,
 },
   });
