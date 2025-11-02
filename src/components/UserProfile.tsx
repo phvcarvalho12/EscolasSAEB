@@ -3,20 +3,20 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { 
-  User, 
-  Settings, 
-  LogOut, 
-  Mail, 
+import {
+  User,
+  Settings,
+  LogOut,
+  Mail,
   Calendar,
   MapPin,
   Edit3,
@@ -35,9 +35,11 @@ interface UserProfileProps {
   usuario: Usuario;
   onLogout: () => void;
   showFullProfile?: boolean;
+  // Nova prop: Para controlar se deve exibir um dropdown ou apenas nome + botão Sair
+  simplifiedHeader?: boolean;
 }
 
-export function UserProfile({ usuario, onLogout, showFullProfile = false }: UserProfileProps) {
+export function UserProfile({ usuario, onLogout, showFullProfile = false, simplifiedHeader = false }: UserProfileProps) {
   const [mostrarPerfil, setMostrarPerfil] = useState(false);
 
   const formatarData = (dataISO: string) => {
@@ -58,7 +60,32 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
       .slice(0, 2);
   };
 
-  // Componente simplificado para header
+  // Componente simplificado para o header (apenas nome e avatar)
+  // Se simplifiedHeader for true, mostra apenas avatar, nome e um botão de logout direto
+  if (simplifiedHeader) {
+    return (
+      <div className="flex items-center gap-2">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="bg-green-600 text-white text-sm">
+            {obterIniciais(usuario.nome)}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-green-700 hidden md:inline">{usuario.nome}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onLogout}
+          className="text-red-600 hover:bg-red-50 hover:text-red-700"
+          title="Sair"
+        >
+          <LogOut className="h-4 w-4 mr-1 md:mr-0" /> {/* Removi o texto no mobile */}
+          <span className="hidden md:inline">Sair</span> {/* Exibe "Sair" apenas em telas maiores */}
+        </Button>
+      </div>
+    );
+  }
+
+  // Comportamento original com Dropdown (quando simplifiedHeader for false)
   if (!showFullProfile) {
     return (
       <DropdownMenu>
@@ -70,10 +97,10 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
               </AvatarFallback>
             </Avatar>
             <span className="text-green-700 hidden md:inline">{usuario.nome}</span>
-            <ChevronDown className="h-4 w-4 text-green-600" />
+            <ChevronDown className="h-4 w-4 text-green-600" /> {/* Seta para baixo */}
           </Button>
         </DropdownMenuTrigger>
-        
+
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
@@ -83,21 +110,21 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
               </p>
             </div>
           </DropdownMenuLabel>
-          
+
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem onClick={() => setMostrarPerfil(true)}>
             <User className="mr-2 h-4 w-4" />
             <span>Meu Perfil</span>
           </DropdownMenuItem>
-          
+
           <DropdownMenuItem disabled>
             <Settings className="mr-2 h-4 w-4" />
             <span>Configurações</span>
           </DropdownMenuItem>
-          
+
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem onClick={onLogout} className="text-red-600 focus:text-red-600">
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sair</span>
@@ -123,7 +150,7 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
             <CardTitle className="text-green-700">{usuario.nome}</CardTitle>
             <p className="text-green-600">Usuário EscolaFinder</p>
           </CardHeader>
-          
+
           <CardContent className="pt-6 space-y-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
@@ -133,9 +160,9 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
                   <p className="text-sm text-gray-600">{usuario.email}</p>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-gray-500" />
                 <div>
@@ -143,9 +170,9 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
                   <p className="text-sm text-gray-600">{formatarData(usuario.dataCriacao)}</p>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               <div className="flex items-center gap-3">
                 <MapPin className="h-4 w-4 text-gray-500" />
                 <div>
@@ -166,7 +193,7 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
                   <Edit3 className="mr-2 h-4 w-4" />
                   Editar Perfil
                 </Button>
-                
+
                 <Button variant="outline" className="w-full justify-start" disabled>
                   <Settings className="mr-2 h-4 w-4" />
                   Configurações
@@ -177,15 +204,15 @@ export function UserProfile({ usuario, onLogout, showFullProfile = false }: User
             <Separator />
 
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1"
                 onClick={() => setMostrarPerfil(false)}
               >
                 Fechar
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 className="flex-1"
                 onClick={onLogout}
               >

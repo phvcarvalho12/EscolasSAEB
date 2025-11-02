@@ -22,13 +22,12 @@ interface Usuario {
   dataCriacao: string;
 }
 
-// ATUALIZADO: Interface Escola agora corresponde exatamente a EscolaIdebResponse da sua API
 interface Escola {
-  id: number; // Adicionado, tipo number conforme sua API
-  siglaUF: string; // Nome da propriedade corrigido (camelCase)
-  nomeMunicipio: string; // Nome da propriedade corrigido (camelCase)
-  nomeEscola: string; // Nome da propriedade corrigido (camelCase)
-  rede: 'Municipal' | 'Estadual' | 'Privada' | 'Não Informado'; // Nome da propriedade corrigido (camelCase)
+  id: number;
+  siglaUF: string;
+  nomeMunicipio: string;
+  nomeEscola: string;
+  rede: 'Municipal' | 'Estadual' | 'Privada' | 'Não Informado';
   OfereceAnosIniciais: boolean;
   OfereceAnosFinais: boolean;
   OfereceEnsinoMedio: boolean;
@@ -59,7 +58,8 @@ export default function App() {
     IdebMinimo: 0.0 
   });
 
-  const [buscaNomeMunicipio, setBuscaNomeMunicipio] = useState(''); 
+  // REMOVIDO: buscaNomeMunicipio não é mais necessária já que o campo de busca foi removido.
+  // const [buscaNomeMunicipio, setBuscaNomeMunicipio] = useState(''); 
 
   const [escolas, setEscolas] = useState<Escola[]>([]);
   const [loadingEscolas, setLoadingEscolas] = useState(false);
@@ -93,16 +93,14 @@ export default function App() {
         throw new Error(errorData.message || 'Erro ao buscar dados das escolas');
       }
 
-      // ATUALIZADO: A API retorna EscolasResponse, que contém um array 'Escolas'
       const responseData = await response.json();
       const escolasRecebidas = Array.isArray(responseData.escolas) ? responseData.escolas : [];
       
       const escolasFormatadas: Escola[] = escolasRecebidas.map((item: any) => ({
-        id: item.id, // Usando o ID da sua API
+        id: item.id,
         siglaUF: item.siglaUF || 'ND',
         nomeMunicipio: item.nomeMunicipio || 'Não Informado',
         nomeEscola: item.nomeEscola || 'Escola sem nome',
-        // Corrigido para 'rede' (camelCase) e ajustado o mapeamento da string
         rede: item.rede === 'Privada' ? 'Privada' : (item.rede === 'Estadual' ? 'Estadual' : (item.rede === 'Municipal' ? 'Municipal' : 'Não Informado')),
         OfereceAnosIniciais: item.ofereceAnosIniciais || false,
         OfereceAnosFinais: item.ofereceAnosFinais || false,
@@ -138,14 +136,12 @@ export default function App() {
     }
   }, [usuarioLogado, filtrosBusca.UF, filtrosBusca.Municipio, filtrosBusca.Rede, filtrosBusca.TipoEnsino, filtrosBusca.IdebMinimo]);
 
-  const escolasFiltradas = useMemo(() => {
-    return escolas.filter(escola => {
-      // Corrigido para 'nomeEscola' e 'nomeMunicipio' (camelCase)
-      const matchBusca = escola.nomeEscola.toLowerCase().includes(buscaNomeMunicipio.toLowerCase()) ||
-                         escola.nomeMunicipio.toLowerCase().includes(buscaNomeMunicipio.toLowerCase());
-      return matchBusca;
-    });
-  }, [buscaNomeMunicipio, escolas]);
+  // REMOVIDO: escolasFiltradas não é mais necessária já que o campo de busca foi removido.
+  //          Agora, a lista de 'escolas' já é o resultado final da API.
+  const escolasExibidas = useMemo(() => {
+    return escolas;
+  }, [escolas]);
+
 
   const handleLogin = (usuario: Usuario) => {
     setUsuarioLogado(usuario);
@@ -195,7 +191,7 @@ export default function App() {
               <p className="text-gray-600">Encontre a escola ideal para seu filho baseado em dados oficiais</p>
             </div>
             <div className="flex items-center gap-4">
-              <UserProfile usuario={usuarioLogado} onLogout={handleLogout} />
+              <UserProfile usuario={usuarioLogado} onLogout={handleLogout} simplifiedHeader={true} />
             </div>
           </div>
         </div>
@@ -313,6 +309,8 @@ export default function App() {
                 />
               </div>
 
+              {/* REMOVIDO: Botão "Aplicar Filtros e Buscar Escolas" */}
+              {/*
               <div className="md:col-span-4">
                 <Button
                   onClick={buscarEscolas}
@@ -322,6 +320,7 @@ export default function App() {
                   {loadingEscolas ? 'Buscando...' : 'Aplicar Filtros e Buscar Escolas'}
                 </Button>
               </div>
+              */}
             </div>
 
             {erroEscolas && (
@@ -333,6 +332,8 @@ export default function App() {
               </Alert>
             )}
 
+            {/* REMOVIDO: Bloco "Buscar por nome ou município (no resultado atual)" */}
+            {/*
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"> 
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-green-700">Buscar por nome ou município (no resultado atual):</Label>
@@ -347,6 +348,7 @@ export default function App() {
                 </div>
               </div>
             </div>
+            */}
           </CardContent>
         </Card>
 
@@ -355,27 +357,27 @@ export default function App() {
             <p className="text-green-800 font-semibold">Carregando escolas...</p>
           ) : (
             <h2 className="text-green-800 font-semibold">
-              {escolasFiltradas.length} escola(s) encontrada(s)
+              {escolasExibidas.length} escola(s) encontrada(s) {/* Alterado para escolasExibidas */}
             </h2>
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {escolasFiltradas.map((escola) => ( // Removido 'index' e usando 'escola.id' como key
+          {escolasExibidas.map((escola) => ( {/* Alterado para escolasExibidas */}
             <Card key={escola.id} className="border-green-200 hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-2">
                   <CardTitle className="text-lg text-green-800 leading-tight">
-                    {escola.nomeEscola} {/* Corrigido para nomeEscola */}
+                    {escola.nomeEscola}
                   </CardTitle>
                   <Badge variant={escola.rede === 'Privada' ? 'default' : 'secondary'} className={escola.rede === 'Privada' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}>
-                    {escola.rede} {/* Corrigido para rede */}
+                    {escola.rede}
                   </Badge>
                 </div>
 
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <MapPin className="h-4 w-4" />
-                  <span>{escola.nomeMunicipio} - {escola.siglaUF}</span> {/* Corrigido para nomeMunicipio e siglaUF */}
+                  <span>{escola.nomeMunicipio} - {escola.siglaUF}</span>
                 </div>
               </CardHeader>
 
@@ -421,7 +423,7 @@ export default function App() {
           ))}
         </div>
 
-        {escolasFiltradas.length === 0 && !loadingEscolas && (
+        {escolasExibidas.length === 0 && !loadingEscolas && ( {/* Alterado para escolasExibidas */}
           <Card className="border-green-200">
             <CardContent className="text-center py-12">
               <div className="text-gray-500 mb-4">
