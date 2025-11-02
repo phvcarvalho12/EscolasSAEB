@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from './components/ui/alert';
 // Define a URL base da API lendo-a das variáveis de ambiente.
 // Em desenvolvimento, será lido de .env.development
 // Em produção, será lido de .env.production (ou .env.staging, se configurado)
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_REACT_APP_API_BASE_URL;
 
 interface Usuario {
   id: string;
