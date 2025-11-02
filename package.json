@@ -55,6 +55,7 @@
       },
       "scripts": {
             "dev": "vite",
-            "build": "vite build"
+            "build": "vite build",
+            "start": "serve -s dist -l $PORT" //ADICIONEI ESTA LINHA 01/11/2025 21:42
       }
 }
