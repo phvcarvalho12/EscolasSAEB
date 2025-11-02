@@ -32,9 +32,8 @@ RUN npm install -g serve
 
 # O Railway injetará a variável de ambiente $PORT em tempo de execução.
 # EXPOSE não é estritamente necessário para o Railway, mas é boa prática
-EXPOSE 3000 
-# ou a porta que você espera, mas o $PORT do Railway irá sobrescrever
+EXPOSE 3000 # ou a porta que você espera, mas o $PORT do Railway irá sobrescrever
 
 # Comando para iniciar o servidor de arquivos estáticos
-# CRUCIAL: Usar '-l 0.0.0.0:$PORT' para ouvir em todas as interfaces
-CMD sh -c "serve -s build -l 0.0.0.0:$PORT"
+# CRUCIAL: Apenas passar '-l $PORT' ou '-p $PORT'
+CMD sh -c "serve -s build -p $PORT"
