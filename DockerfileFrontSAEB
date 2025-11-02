@@ -11,11 +11,16 @@ RUN npm install
 # Copiar o restante do código fonte
 COPY . .
 
-# Usar npx para executar o build do Vite
-# npx é a maneira mais robusta de executar executáveis de pacotes locais
-# Ele geralmente lida com permissões e PATH automaticamente
-# Se "Permission denied" voltar, podemos adicionar o chmod antes do npx.
-RUN npx vite build
+# Adicionar permissão de execução explicitamente para npx e então usar npx para executar o build do Vite
+# Nota: o npx pode estar em diferentes locais dependendo da instalação.
+# Geralmente, ele está acessível via PATH após 'npm install'.
+# Se 'sh: 1: npx: Permission denied' persistir, podemos tentar o caminho completo para npx.
+# Por enquanto, vamos tentar dar permissão ao binário vite e chamá-lo diretamente,
+# já que o npx em si está com problemas.
+
+# Tentar dar permissão ao executável vite E chamá-lo pelo caminho completo para evitar o npx problemático
+RUN chmod +x ./node_modules/.bin/vite && ./node_modules/.bin/vite build
+
 
 # Production stage
 FROM node:20-alpine
@@ -25,20 +30,13 @@ WORKDIR /app
 # Copiar os arquivos buildados. O Vite usa 'dist' por padrão.
 COPY --from=build /app/dist ./dist
 # Adicionado: Copiar package.json para o stage de produção
-# Isso é útil se o seu CMD (como 'serve') precisar de algo do package.json,
-# ou se você quiser rodar 'npm install --only=production' para 'serve'.
-# No seu caso, você está instalando 'serve' globalmente, então o package.json não é estritamente necessário aqui,
-# mas é uma boa prática para projetos JS/TS.
 COPY --from=build /app/package*.json ./
 
 # Instalar 'serve' globalmente para usá-lo como um servidor de arquivos estáticos
 RUN npm install -g serve
 
 # O Railway injetará a variável de ambiente $PORT em tempo de execução.
-# Não defina ENV PORT aqui, se o Railway for gerenciar isso.
-# EXPOSE $PORT é uma boa prática para documentar a porta esperada.
-EXPOSE $PORT 
-# O Railway substituirá $PORT pela porta real
+EXPOSE $PORT
 
 # Comando para iniciar o servidor de arquivos estáticos
 # O Railway passará $PORT para este comando
