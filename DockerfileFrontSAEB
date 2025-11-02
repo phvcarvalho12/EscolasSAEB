@@ -12,8 +12,8 @@ RUN npm install
 # Copiar código fonte
 COPY . .
 
-# Build da aplicação
-RUN npm run build
+# Build da aplicação usando npx
+RUN npx vite build
 
 # Production stage
 FROM node:18-alpine
@@ -22,7 +22,6 @@ WORKDIR /app
 
 # Copiar arquivos buildados
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/package*.json ./
 
 # Instalar apenas serve
 RUN npm install -g serve
@@ -32,4 +31,4 @@ ENV PORT=3000
 EXPOSE 3000
 
 # Comando de inicialização
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD serve -s dist -p $PORT
