@@ -126,155 +126,144 @@ export function Auth({ onLogin }: AuthProps) {
 
   // Função para finalizar cadastro com nome do perfil
   const finalizarCadastro = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setErro('');
+    e.preventDefault();
+    setLoading(true);
+    setErro('');
 
-  if (!dadosCadastro.nome.trim()) {
-    setErro('Por favor, insira um nome para seu perfil');
-    setLoading(false);
-    return;
-  }
+    if (!dadosCadastro.nome.trim()) {
+      setErro('Por favor, insira um nome para seu perfil');
+      setLoading(false);
+      return;
+    }
 
-  try {
-    // POST /api/Cadastro/PostCadastro
-    const response = await fetch(`${API_BASE_URL}/Cadastro/PostCadastro`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify
-      ({
-        Email: dadosCadastro.email,
-        Senha: dadosCadastro.senha,
-        Nome: dadosCadastro.nome.trim()
-      })
+    try {
+      // POST /api/Cadastro/PostCadastro
+      const response = await fetch(`${API_BASE_URL}/Cadastro/PostCadastro`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify
+        ({
+          Email: dadosCadastro.email,
+          Senha: dadosCadastro.senha,
+          Nome: dadosCadastro.nome.trim()
+        })
 
-    });
+      });
 
-    // Tratar erros
-    if (response.status === 400) {
-      const errorData = await response.json().catch(() => ({}));
-      
-      // Se o email já existe, sua API provavelmente retorna um erro específico
-      if (errorData.message?.includes('email') || errorData.message?.includes('Email')) {
-        throw new Error('Este email já está cadastrado. Faça login.');
+      // Tratar erros
+      if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Se o email já existe, sua API provavelmente retorna um erro específico
+        if (errorData.message?.includes('email') || errorData.message?.includes('Email')) {
+          throw new Error('Este email já está cadastrado. Faça login.');
+        }
+        
+        throw new Error(errorData.message || 'Dados inválidos');
       }
-      
-      throw new Error(errorData.message || 'Dados inválidos');
-    }
 
-    if (response.status === 500) {
-      throw new Error('Erro no servidor. Tente novamente mais tarde.');
-    }
+      if (response.status === 500) {
+        throw new Error('Erro no servidor. Tente novamente mais tarde.');
+      }
 
-    if (!response.ok) {
-      throw new Error('Erro ao realizar cadastro');
-    }
+      if (!response.ok) {
+        throw new Error('Erro ao realizar cadastro');
+      }
 
-  let resultado = {};
-try {
-  resultado = await response.json();
-} catch {
-  console.warn("A resposta não era JSON ou estava vazia.");
-}
-
-
-    // Criar objeto de usuário
-    const novoUsuario: Usuario = {
-      id: resultado.id || Date.now().toString(),
-      email: dadosCadastro.email,
-      senha: '', // NÃO armazenar senha
-      nome: dadosCadastro.nome.trim(),
-      dataCriacao: resultado.dataCriacao || new Date().toISOString()
-    };
-
-    // Salvar no localStorage
-    localStorage.setItem('escolafinder_usuario_logado', JSON.stringify(novoUsuario));
-
-    setSucesso('Cadastro realizado com sucesso! Bem-vindo ao EscolaFinder!');
-
-    // Fazer login automático
-    setTimeout(() => onLogin(novoUsuario), 1500);
-
-  } catch (erro: any) {
-    console.error('Erro no cadastro:', erro);
-    setErro(erro.message || 'Erro ao realizar cadastro. Tente novamente.');
-  } finally {
-    setLoading(false);
+    let resultado = {};
+  try {
+    resultado = await response.json();
+  } catch {
+    console.warn("A resposta não era JSON ou estava vazia.");
   }
-};
+
+
+      // Criar objeto de usuário
+      const novoUsuario: Usuario = {
+        id: resultado.id || Date.now().toString(),
+        email: dadosCadastro.email,
+        senha: '', // NÃO armazenar senha
+        nome: dadosCadastro.nome.trim(),
+        dataCriacao: resultado.dataCriacao || new Date().toISOString()
+      };
+
+      // Salvar no localStorage
+      localStorage.setItem('escolafinder_usuario_logado', JSON.stringify(novoUsuario));
+
+      setSucesso('Cadastro realizado com sucesso! Bem-vindo ao EscolaFinder!');
+
+      // Fazer login automático
+      setTimeout(() => onLogin(novoUsuario), 1500);
+
+    } catch (erro: any) {
+      console.error('Erro no cadastro:', erro);
+      setErro(erro.message || 'Erro ao realizar cadastro. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Função para lidar com login
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setErro('');
-//tentativa de conexão com a api
-const response = await fetch(`${API_BASE_URL}/Cadastro/PostLogin`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    Email: dadosLogin.email,
-    Senha: dadosLogin.senha
-  })
-});
-
-console.log("Resposta da API:", response.status, response);
-
-  if (!validarEmail(dadosLogin.email)) {
-    setErro('Por favor, insira um email válido');
-    setLoading(false);
-    return;
-  }
-
-  try {
-    // POST 'https://prolific-delight-production-432f.up.railway.app';
-    const response = await fetch(`${API_BASE_URL}/Cadastro/PostLogin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: dadosLogin.email,
-        senha: dadosLogin.senha
-      })
-    });
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 404) {
-        throw new Error('Email ou senha incorretos');
-      }
-      throw new Error('Erro ao fazer login. Tente novamente.');
+    e.preventDefault();
+    setLoading(true);
+    setErro('');
+  
+    if (!validarEmail(dadosLogin.email)) {
+      setErro('Por favor, insira um email válido');
+      setLoading(false);
+      return;
     }
 
-    let resultado = {};
-try {
-  resultado = await response.json();
-} catch {
-  console.warn("A resposta não era JSON ou estava vazia.");
-}
+    try {
+      // POST 'https://prolific-delight-production-432f.up.railway.app';
+      const response = await fetch(`${API_BASE_URL}/Cadastro/PostLogin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: dadosLogin.email,
+          senha: dadosLogin.senha
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 404) {
+          throw new Error('Email ou senha incorretos');
+        }
+        throw new Error('Erro ao fazer login. Tente novamente.');
+      }
+
+      let resultado = {};
+    try {
+      resultado = await response.json();
+    } catch {
+      console.warn("A resposta não era JSON ou estava vazia.");
+    }
 
 
-    // Criar objeto de usuário
-    const usuario: Usuario = {
-      id: resultado.id || Date.now().toString(),
-      email: resultado.email || dadosLogin.email,
-      senha: '', // Não armazenar senha
-      nome: resultado.nome || 'Usuário',
-      dataCriacao: resultado.dataCriacao || new Date().toISOString()
-    };
+      // Criar objeto de usuário
+      const usuario: Usuario = {
+        id: resultado.id || Date.now().toString(),
+        email: resultado.email || dadosLogin.email,
+        senha: '', // Não armazenar senha
+        nome: resultado.nome || 'Usuário',
+        dataCriacao: resultado.dataCriacao || new Date().toISOString()
+      };
 
-    setSucesso('Login realizado com sucesso!');
-    setTimeout(() => onLogin(usuario), 1000);
+      setSucesso('Login realizado com sucesso!');
+      setTimeout(() => onLogin(usuario), 1000);
 
-  } catch (erro: any) {
-    console.error('Erro no login:', erro);
-    setErro(erro.message || 'Erro ao fazer login. Tente novamente.');
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (erro: any) {
+      console.error('Erro no login:', erro);
+      setErro(erro.message || 'Erro ao fazer login. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">

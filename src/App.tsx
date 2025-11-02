@@ -6,15 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Badge } from './components/ui/badge';
 import { Slider } from './components/ui/slider';
-import { MapPin, Star, Users, Award, Filter, Search, LogOut, AlertCircle } from 'lucide-react'; // Adicionado AlertCircle
+import { MapPin, Star, Users, Award, Filter, Search, LogOut, AlertCircle } from 'lucide-react';
 import { Auth } from './components/Auth';
 import { UserProfile } from './components/UserProfile';
-import { EscolaDetalhes } from './components/EscolaDetalhes';
-import { Alert, AlertDescription } from './components/ui/alert'; // Adicionado Alert e AlertDescription
+import { Alert, AlertDescription } from './components/ui/alert';
 
-// ============================================
-// 1. ADICIONE NO TOPO: API_BASE_URL
-// ============================================
 const API_BASE_URL = 'https://prolific-delight-production-432f.up.railway.app';
 
 interface Usuario {
@@ -25,71 +21,71 @@ interface Usuario {
   dataCriacao: string;
 }
 
-// Definição da interface Escola (manter como está, pode precisar de pequenos ajustes dependendo da API)
+// ============================================
+// MODIFICAÇÃO: Nova Definição da interface Escola
+// ============================================
 interface Escola {
-  id: number;
-  nome: string;
-  endereco: string;
-  bairro: string;
-  cidade: string;
-  tipo: 'Pública' | 'Privada';
-  ideb: number; // Índice de Desenvolvimento da Educação Básica (0-10)
-  saeb: number; // Conceito SAEB (1-5)
-  numeroAlunos: number;
-  distanciaKm: number; // Distância simulada do usuário
-  lat: number;
-  lng: number;
-  nivelEnsino: 'Fundamental I' | 'Fundamental II' | 'Médio' | 'Fundamental Completo' | 'Completo';
-  infraestrutura: string[];
+  SiglaUF: string;
+  NomeMunicipio: string;
+  NomeEscola: string;
+  Rede: 'Municipal' | 'Estadual' | 'Privada';
+  OfereceAnosIniciais: boolean;
+  OfereceAnosFinais: boolean;
+  OfereceEnsinoMedio: boolean;
+  IdebAnosIniciais: number | null;
+  AnoReferenciaAnosIniciais: number | null;
+  IdebAnosFinais: number | null;
+  AnoReferenciaAnosFinais: number | null;
+  IdebEnsinoMedio: number | null;
+  AnoReferenciaEnsinoMedio: number | null;
 }
 
-// Função auxiliar para mapear tipo de ensino (manter como está)
-const mapearNivelEnsino = (tipoEnsino: string): Escola['nivelEnsino'] => {
-  const tipo = tipoEnsino?.toLowerCase() || '';
-  if (tipo.includes('iniciais')) return 'Fundamental I';
-  if (tipo.includes('finais')) return 'Fundamental II';
-  if (tipo.includes('médio')) return 'Médio';
-  // Adicione outras lógicas se 'Completo' for uma opção real da API e não apenas um mapeamento interno
-  if (tipo.includes('completo')) return 'Completo';
-  return 'Fundamental Completo'; // Default
+// Função auxiliar para mapear tipo de ensino (ajustada para os novos booleanos)
+const obterNiveisEnsino = (escola: Escola): string => {
+  const niveis: string[] = [];
+  if (escola.OfereceAnosIniciais) niveis.push('Fundamental I');
+  if (escola.OfereceAnosFinais) niveis.push('Fundamental II');
+  if (escola.OfereceEnsinoMedio) niveis.push('Médio');
+  return niveis.length > 0 ? niveis.join(', ') : 'Não informado';
 };
 
+// Função para obter o IDEB geral ou o mais relevante
+const obterIdebGeral = (escola: Escola): number => {
+  if (escola.IdebEnsinoMedio !== null) return escola.IdebEnsinoMedio;
+  if (escola.IdebAnosFinais !== null) return escola.IdebAnosFinais;
+  if (escola.IdebAnosIniciais !== null) return escola.IdebAnosIniciais;
+  return 0; // Ou outro valor padrão
+};
 
 export default function App() {
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
-  const [escolaSelecionada, setEscolaSelecionada] = useState<Escola | null>(null);
+  // MODIFICAÇÃO: Removido escolaSelecionada
+  // const [escolaSelecionada, setEscolaSelecionada] = useState<Escola | null>(null);
+  
   const [filtros, setFiltros] = useState({
     busca: '',
     tipo: 'Todas',
     nivelEnsino: 'Todos',
-    distanciaMax: [10], // Array para o Slider
-    idebMin: [5.0] // Array para o Slider
+    distanciaMax: [10],
+    idebMin: [5.0]
   });
 
-  // ============================================
-  // 2. ADICIONE NOVOS ESTADOS PARA A API IDEB
-  // ============================================
   const [escolas, setEscolas] = useState<Escola[]>([]);
   const [loadingEscolas, setLoadingEscolas] = useState(false);
   const [erroEscolas, setErroEscolas] = useState('');
 
-  // Estados para os filtros da API IDEB
   const [filtrosAPI, setFiltrosAPI] = useState({
     UF: 'SP',
     Municipio: 'São Paulo',
-    Rede: '', // Municipal, Estadual, Privada ou vazio
-    TipoEnsino: '' // Anos Iniciais, Anos Finais, Ensino Médio ou vazio
+    Rede: '',
+    TipoEnsino: ''
   });
 
-  // ============================================
-  // 3. ADICIONE A FUNÇÃO PARA BUSCAR ESCOLAS
-  // ============================================
   const buscarEscolas = async () => {
     setLoadingEscolas(true);
     setErroEscolas('');
 
     try {
-      // Construir query string
       const params = new URLSearchParams();
 
       if (filtrosAPI.UF) params.append('UF', filtrosAPI.UF);
@@ -97,7 +93,6 @@ export default function App() {
       if (filtrosAPI.Rede) params.append('Rede', filtrosAPI.Rede);
       if (filtrosAPI.TipoEnsino) params.append('TipoEnsino', filtrosAPI.TipoEnsino);
 
-      // GET 'https://prolific-delight-production-432f.up.railway.app';
       const response = await fetch(
         `${API_BASE_URL}/Ideb?${params.toString()}`
       );
@@ -108,22 +103,23 @@ export default function App() {
 
       const dados = await response.json();
 
-      // Mapear os dados da API para o formato da interface Escola
-      const escolasFormatadas: Escola[] = dados.map((item: any, index: number) => ({
-        id: item.id || index + 1, // Usar id da API se existir, senão gerar um
-        nome: item.nome || item.nomeEscola || `Escola ${index + 1}`,
-        endereco: item.endereco || 'Endereço não informado',
-        bairro: item.bairro || 'Centro', // A API pode não ter bairro, usar default ou tentar extrair do endereço
-        cidade: item.municipio || filtrosAPI.Municipio,
-        tipo: item.rede === 'Privada' ? 'Privada' : 'Pública',
-        ideb: item.ideb || 0,
-        enade: item.enade || 3, // Se não tiver, usar valor padrão
-        numeroAlunos: item.numeroAlunos || Math.floor(Math.random() * (1500 - 100 + 1)) + 100, // Gerar aleatório
-        distanciaKm: item.distancia || parseFloat((Math.random() * 10).toFixed(1)), // Gerar aleatório
-        lat: item.latitude || -23.550520, // Usar lat da API se existir, senão default
-        lng: item.longitude || -46.633308, // Usar lng da API se existir, senão default
-        nivelEnsino: mapearNivelEnsino(item.tipoEnsino || filtrosAPI.TipoEnsino),
-        infraestrutura: item.infraestrutura || ['Biblioteca', 'Quadra Esportiva'] // Default ou buscar de outra API
+      // ============================================
+      // MODIFICAÇÃO: Mapeamento dos dados da API para a nova interface Escola
+      // ============================================
+      const escolasFormatadas: Escola[] = dados.map((item: any) => ({
+        SiglaUF: item.siglaUF || 'ND',
+        NomeMunicipio: item.nomeMunicipio || 'Não Informado',
+        NomeEscola: item.nomeEscola || 'Escola sem nome',
+        Rede: item.rede === 'Privada' ? 'Privada' : (item.rede === 'Estadual' ? 'Estadual' : 'Municipal'),
+        OfereceAnosIniciais: item.ofereceAnosIniciais || false,
+        OfereceAnosFinais: item.ofereceAnosFinais || false,
+        OfereceEnsinoMedio: item.ofereceEnsinoMedio || false,
+        IdebAnosIniciais: item.idebAnosIniciais || null,
+        AnoReferenciaAnosIniciais: item.anoReferenciaAnosIniciais || null,
+        IdebAnosFinais: item.idebAnosFinais || null,
+        AnoReferenciaAnosFinais: item.anoReferenciaAnosFinais || null,
+        IdebEnsinoMedio: item.idebEnsinoMedio || null,
+        AnoReferenciaEnsinoMedio: item.anoReferenciaEnsinoMedio || null,
       }));
 
       setEscolas(escolasFormatadas);
@@ -136,7 +132,6 @@ export default function App() {
     }
   };
 
-  // Verificar se há usuário logado no localStorage ao carregar
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem('escolafinder_usuario_logado');
     if (usuarioSalvo) {
@@ -144,73 +139,64 @@ export default function App() {
     }
   }, []);
 
-  // ============================================
-  // 4. ADICIONE useEffect PARA BUSCAR ESCOLAS AO CARREGAR
-  // ============================================
   useEffect(() => {
-    // Só buscar escolas se o usuário estiver logado e se a lista de escolas estiver vazia (primeira carga)
-    // Ou se os filtros da API mudarem para que ele recarregue automaticamente
     if (usuarioLogado) {
       buscarEscolas();
     }
-  }, [usuarioLogado, filtrosAPI.UF, filtrosAPI.Municipio, filtrosAPI.Rede, filtrosAPI.TipoEnsino]); // Dependências para re-buscar
+  }, [usuarioLogado, filtrosAPI.UF, filtrosAPI.Municipio, filtrosAPI.Rede, filtrosAPI.TipoEnsino]);
 
-
-  // Mover useMemo para antes do early return para manter a ordem dos hooks
   // ============================================
-  // 5. MODIFICAR o useMemo de escolasFiltradas
+  // MODIFICAÇÃO: Lógica de filtros ajustada para a nova interface Escola
   // ============================================
   const escolasFiltradas = useMemo(() => {
-    return escolas.filter(escola => { // SUBSTITUA 'escolasDatabase' por 'escolas'
-      const matchBusca = escola.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-                        escola.bairro.toLowerCase().includes(filtros.busca.toLowerCase());
+    return escolas.filter(escola => {
+      const matchBusca = escola.NomeEscola.toLowerCase().includes(filtros.busca.toLowerCase()) ||
+                         escola.NomeMunicipio.toLowerCase().includes(filtros.busca.toLowerCase());
 
-      const matchTipo = filtros.tipo === 'Todas' || escola.tipo === filtros.tipo;
+      const matchTipo = filtros.tipo === 'Todas' || escola.Rede.toLowerCase() === filtros.tipo.toLowerCase();
 
       const matchNivel = filtros.nivelEnsino === 'Todos' ||
-                        escola.nivelEnsino === filtros.nivelEnsino ||
-                        (filtros.nivelEnsino === 'Fundamental' &&
-                         (escola.nivelEnsino.includes('Fundamental') || escola.nivelEnsino === 'Completo'));
+                        (filtros.nivelEnsino === 'Fundamental I' && escola.OfereceAnosIniciais) ||
+                        (filtros.nivelEnsino === 'Fundamental II' && escola.OfereceAnosFinais) ||
+                        (filtros.nivelEnsino === 'Médio' && escola.OfereceEnsinoMedio) ||
+                        (filtros.nivelEnsino === 'Fundamental' && (escola.OfereceAnosIniciais || escola.OfereceAnosFinais)) ||
+                        (filtros.nivelEnsino === 'Completo' && (escola.OfereceAnosIniciais || escola.OfereceAnosFinais || escola.OfereceEnsinoMedio));
+      
+      const idebGeral = obterIdebGeral(escola);
+      const matchIdeb = idebGeral >= filtros.idebMin[0];
 
-      const matchDistancia = escola.distanciaKm <= filtros.distanciaMax[0];
+      // REMOVIDO: matchDistancia (não há mais distanciaKm)
+      return matchBusca && matchTipo && matchNivel && matchIdeb;
+    });// REMOVIDO: .sort((a, b) => a.distanciaKm - b.distanciaKm);
+  }, [filtros, escolas]);
 
-      const matchIdeb = escola.ideb >= filtros.idebMin[0];
-
-      return matchBusca && matchTipo && matchNivel && matchDistancia && matchIdeb;
-    }).sort((a, b) => a.distanciaKm - b.distanciaKm); // Ordenar por proximidade
-  }, [filtros, escolas]); // Adicione 'escolas' como dependência para o useMemo
-
-
-  // Função para fazer login
   const handleLogin = (usuario: Usuario) => {
     setUsuarioLogado(usuario);
     localStorage.setItem('escolafinder_usuario_logado', JSON.stringify(usuario));
   };
 
-  // Função para fazer logout
   const handleLogout = () => {
     setUsuarioLogado(null);
-    setEscolaSelecionada(null); // Limpar escola selecionada ao deslogar
-    setEscolas([]); // Limpar escolas ao deslogar
+    // MODIFICAÇÃO: Removido setEscolaSelecionada(null);
+    setEscolas([]);
     localStorage.removeItem('escolafinder_usuario_logado');
   };
 
-  // Se não há usuário logado, mostrar tela de auth
   if (!usuarioLogado) {
     return <Auth onLogin={handleLogin} />;
   }
 
-  // Se há escola selecionada, mostrar detalhes
-  if (escolaSelecionada) {
-    return (
-      <EscolaDetalhes
-        escola={escolaSelecionada}
-        onVoltar={() => setEscolaSelecionada(null)}
-        onLogout={handleLogout}
-        usuarioLogado={{ nome: usuarioLogado.nome }}
-      />
-    );
-  }
+  // MODIFICAÇÃO: Removido o bloco if (escolaSelecionada)
+  // if (escolaSelecionada) {
+  //   return (
+  //     <EscolaDetalhes
+  //       escola={escolaSelecionada}
+  //       onVoltar={() => setEscolaSelecionada(null)}
+  //       onLogout={handleLogout}
+  //       usuarioLogado={{ nome: usuarioLogado.nome }}
+  //     />
+  //   );
+  // }
 
   const getIdebColor = (ideb: number) => {
     if (ideb >= 8) return 'text-green-600 bg-green-100';
@@ -219,14 +205,7 @@ export default function App() {
     return 'text-red-500 bg-red-100';
   };
 
-  const getSaebStars = (SAEB: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-4 w-4 ${i < SAEB ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-      />
-    ));
-  };
+  // REMOVIDO: getSaebStars (não há mais SAEB)
 
   return (
     <div className="min-h-screen bg-green-50">
@@ -267,9 +246,6 @@ export default function App() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            {/* ============================================ */}
-            {/* 6. ADICIONAR NOVOS FILTROS NO JSX (API) */}
-            {/* ============================================ */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-green-50 rounded-lg">
               <div className="space-y-2">
                 <Label className="text-green-700">Estado (UF)</Label>
@@ -285,7 +261,6 @@ export default function App() {
                     <SelectItem value="RJ">Rio de Janeiro</SelectItem>
                     <SelectItem value="MG">Minas Gerais</SelectItem>
                     <SelectItem value="RS">Rio Grande do Sul</SelectItem>
-                    {/* Adicione outros estados conforme necessário */}
                   </SelectContent>
                 </Select>
               </div>
@@ -347,7 +322,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Exibir erro se houver */}
             {erroEscolas && (
               <Alert className="mb-4 border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4 text-red-500" />
@@ -358,13 +332,12 @@ export default function App() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              {/* Busca por nome/bairro */}
               <div className="space-y-2">
-                <Label className="text-green-700">Buscar por nome ou bairro:</Label>
+                <Label className="text-green-700">Buscar por nome ou município:</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Digite o nome da escola ou bairro"
+                    placeholder="Digite o nome da escola ou município"
                     value={filtros.busca}
                     onChange={(e) => setFiltros({ ...filtros, busca: e.target.value })}
                     className="pl-10 border-green-200 focus:border-green-500"
@@ -372,7 +345,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Tipo */}
               <div className="space-y-2">
                 <Label className="text-green-700">Tipo de escola:</Label>
                 <Select
@@ -390,7 +362,6 @@ export default function App() {
                 </Select>
               </div>
 
-              {/* Nível de Ensino */}
               <div className="space-y-2">
                 <Label className="text-green-700">Nível de ensino:</Label>
                 <Select
@@ -412,23 +383,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Sliders */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Distância */}
-              <div className="space-y-3">
-                <Label className="text-green-700">
-                  Distância máxima: {filtros.distanciaMax[0]} km
-                </Label>
-                <Slider
-                  value={filtros.distanciaMax}
-                  onValueChange={(value) => setFiltros({ ...filtros, distanciaMax: value })}
-                  max={10}
-                  min={0.5}
-                  step={0.5}
-                  className="w-full"
-                />
-              </div>
-
+            {/* Sliders (Distância removido, IDEB mantido) */}
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
               {/* IDEB Mínimo */}
               <div className="space-y-3">
                 <Label className="text-green-700">
@@ -460,85 +416,70 @@ export default function App() {
 
         {/* Lista de Escolas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {escolasFiltradas.map((escola) => (
-            <Card key={escola.id} className="border-green-200 hover:shadow-lg transition-shadow">
+          {escolasFiltradas.map((escola, index) => (
+            <Card key={index} className="border-green-200 hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-2">
                   <CardTitle className="text-lg text-green-800 leading-tight">
-                    {escola.nome}
+                    {escola.NomeEscola}
                   </CardTitle>
-                  <Badge variant={escola.tipo === 'Pública' ? 'secondary' : 'default'}>
-                    {escola.tipo}
+                  <Badge variant={escola.Rede === 'Pública' ? 'secondary' : 'default'}>
+                    {escola.Rede}
                   </Badge>
                 </div>
 
                 <div className="flex items-center gap-1 text-sm text-gray-600">
                   <MapPin className="h-4 w-4" />
-                  <span>{escola.distanciaKm.toFixed(1)} km • {escola.bairro}</span>
+                  <span>{escola.NomeMunicipio} - {escola.SiglaUF}</span>
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Endereço */}
-                <p className="text-sm text-gray-600">
-                  {escola.endereco}, {escola.bairro}
-                </p>
-
                 {/* Métricas */}
                 <div className="space-y-3">
-                  {/* IDEB */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">IDEB:</span>
-                    <Badge className={getIdebColor(escola.ideb)}>
-                      {escola.ideb.toFixed(1)}
-                    </Badge>
-                  </div>
-
-                  {/* SAEB */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Conceito SAEB:</span>
-                    <div className="flex gap-1">
-                      {getSaebStars(escola.saeb)}
+                  {escola.IdebAnosIniciais !== null && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">IDEB Anos Iniciais ({escola.AnoReferenciaAnosIniciais}):</span>
+                      <Badge className={getIdebColor(escola.IdebAnosIniciais)}>
+                        {escola.IdebAnosIniciais.toFixed(1)}
+                      </Badge>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Número de Alunos */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Alunos:</span>
-                    <span className="flex items-center gap-1 text-sm">
-                      <Users className="h-4 w-4" />
-                      {escola.numeroAlunos.toLocaleString()}
-                    </span>
-                  </div>
+                  {escola.IdebAnosFinais !== null && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">IDEB Anos Finais ({escola.AnoReferenciaAnosFinais}):</span>
+                      <Badge className={getIdebColor(escola.IdebAnosFinais)}>
+                        {escola.IdebAnosFinais.toFixed(1)}
+                      </Badge>
+                    </div>
+                  )}
 
-                  {/* Nível de Ensino */}
+                  {escola.IdebEnsinoMedio !== null && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">IDEB Ensino Médio ({escola.AnoReferenciaEnsinoMedio}):</span>
+                      <Badge className={getIdebColor(escola.IdebEnsinoMedio)}>
+                        {escola.IdebEnsinoMedio.toFixed(1)}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Níveis de Ensino Oferecidos */}
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Ensino:</span>
                     <Badge variant="outline" className="text-xs">
-                      {escola.nivelEnsino}
+                      {obterNiveisEnsino(escola)}
                     </Badge>
                   </div>
                 </div>
 
-                {/* Infraestrutura */}
-                <div>
-                  <span className="text-sm font-medium mb-2 block">Infraestrutura:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {escola.infraestrutura.map((item, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {item}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Botão de ação */}
-                <Button
+                {/* REMOVIDO: Infraestrutura e Botão "Ver Detalhes" */}
+                {/* <Button
                   className="w-full bg-green-600 hover:bg-green-700"
                   onClick={() => setEscolaSelecionada(escola)}
                 >
                   Ver Detalhes
-                </Button>
+                </Button> */}
               </CardContent>
             </Card>
           ))}
